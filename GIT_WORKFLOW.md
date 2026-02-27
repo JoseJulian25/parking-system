@@ -410,38 +410,3 @@ git checkout main
 git pull origin main
 ```
 
----
-
-## 🏆 Objetivo Final
-
-Al terminar el proyecto, deberías poder:
-- ✅ Crear ramas sin miedo
-- ✅ Hacer commits con mensajes claros
-- ✅ Resolver conflictos simples
-- ✅ Entender el historial de Git
-- ✅ Trabajar en paralelo sin bloquear al equipo
-
----
-
-## 📊 Ventajas de Este Workflow Simplificado
-
-**Comparado con workflows más complejos (GitFlow, etc.):**
-
-| Aspecto | Workflow Simplificado | GitFlow Tradicional |
-|---------|----------------------|---------------------|
-| **Ramas** | `main` + `feature/*` | `main` + `dev` + `release` + `hotfix` + `feature/*` |
-| **Pasos para integrar** | 1 PR (feature → main) | 2+ PRs (feature → dev, dev → main) |
-| **Complejidad** | ⭐ Baja | ⭐⭐⭐⭐ Alta |
-| **Ideal para** | Equipos pequeños, MVPs | Equipos grandes, productos en producción |
-| **Curva de aprendizaje** | 1-2 días | 1-2 semanas |
-
-**Para nuestro proyecto universitario de 4 personas, este workflow es perfecto porque:**
-1. ✅ Reduce fricción y permite enfocarse en aprender a programar
-2. ✅ Mantiene calidad con code review obligatorio
-3. ✅ Fácil de seguir y difícil de romper
-4. ✅ Escalable si el equipo crece
-
----
-
-**¡Git es tu amigo, no tu enemigo! Con práctica se vuelve natural 🚀**
-
