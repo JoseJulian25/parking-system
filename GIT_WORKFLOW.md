@@ -3,6 +3,13 @@
 ## 🎯 Objetivo
 Trabajar en paralelo sin pisarnos el código, con un sistema simple y seguro.
 
+## 💡 ¿Por qué este workflow?
+Este proyecto usa un **flujo simplificado** ideal para equipos pequeños (4 personas):
+- **2 ramas:** Solo `main` + `feature/*` (sin ramas intermedias)
+- **Revisión obligatoria:** Todo código pasa por Pull Request y code review
+- **Protección de main:** Solo el líder puede hacer merge a `main`
+- **Menos pasos = menos errores:** Perfecto para aprender Git sin complejidad innecesaria
+
 ---
 
 ## 📐 Estructura de Ramas
@@ -10,16 +17,14 @@ Trabajar en paralelo sin pisarnos el código, con un sistema simple y seguro.
 ```
 main (producción, siempre funcional)
   ↓
-dev (integración, donde se unen todas las features)
-  ↓
 feature/nombre-de-la-tarea (tu código personal)
 ```
 
 **Reglas sagradas:**
 - ❌ **NUNCA** hacer commit directo a `main`
-- ❌ **NUNCA** hacer commit directo a `dev`
 - ✅ **SIEMPRE** trabajar en tu rama `feature/...`
-- ✅ **SIEMPRE** hacer Pull Request para unir tu código
+- ✅ **SIEMPRE** hacer Pull Request para unir tu código a `main`
+- ✅ El líder revisa y aprueba cada PR antes de merge
 
 ---
 
@@ -45,7 +50,7 @@ cd parking-system
 ### 4. Verificar rama actual
 ```bash
 git branch
-# Deberías ver: * dev
+# Deberías ver: * main
 ```
 
 ---
@@ -56,11 +61,11 @@ git branch
 Actualiza tu código con los últimos cambios del equipo:
 
 ```bash
-# 1. Asegúrate de estar en dev
-git checkout dev
+# 1. Asegúrate de estar en main
+git checkout main
 
 # 2. Descarga los últimos cambios
-git pull origin dev
+git pull origin main
 ```
 
 ---
@@ -102,17 +107,6 @@ git add .
 git commit -m "feat: crear página de login con validación de formulario"
 ```
 
-**Formato de mensajes de commit:**
-```
-feat: agregar nueva funcionalidad
-fix: corregir bug
-style: cambios de estilos/formato
-refactor: mejorar código sin cambiar funcionalidad
-docs: actualizar documentación
-```
-
----
-
 ### **PASO 4: Subir tu rama al repositorio**
 
 ```bash
@@ -129,23 +123,9 @@ git push
 
 1. Ve a GitHub/GitLab
 2. Verás un botón "Compare & pull request" → Click
-3. Completa la información:
+3. **Base branch**: Asegúrate que sea `main` ← `feature/tu-rama`
+4. Completa la información:
    - **Título:** Descripción breve de tu tarea
-   - **Descripción:** 
-     ```
-     ## ¿Qué hace este PR?
-     - Agrega página de login
-     - Conecta formulario con API /auth/login
-     
-     ## ¿Cómo probar?
-     1. Ir a /login
-     2. Ingresar usuario: admin, password: 123
-     3. Verificar que redirija al dashboard
-     
-     ## Screenshots (si aplica)
-     [captura de pantalla]
-     ```
-4. Asignar reviewer: **Tu líder técnico**
 5. Click "Create Pull Request"
 
 ---
@@ -153,7 +133,7 @@ git push
 ### **PASO 6: Responder a Code Review**
 
 El líder revisará tu código y puede:
-- ✅ **Aprobar:** Tu código pasa → se hace merge a `dev`
+- ✅ **Aprobar:** Tu código pasa → se hace merge a `main`
 - 💬 **Comentar cambios:** Tienes que hacer ajustes
 
 Si te piden cambios:
@@ -173,14 +153,14 @@ git push
 
 ### **PASO 7: Después del Merge**
 
-Tu código ya está en `dev`, ahora limpia:
+Tu código ya está en `main`, ahora limpia:
 
 ```bash
-# Volver a dev
-git checkout dev
+# Volver a main
+git checkout main
 
 # Traer tu código ya mergeado
-git pull origin dev
+git pull origin main
 
 # Borrar tu rama local (ya no la necesitas)
 git branch -d feature/tu-rama-vieja
@@ -227,13 +207,13 @@ git add archivo-con-conflicto.js
 git commit -m "fix: resolver conflicto en archivo X"
 ```
 
-### "Necesito traer cambios de dev a mi rama"
+### "Necesito traer cambios de main a mi rama"
 ```bash
 # Estando en tu rama feature
 git checkout feature/mi-rama
 
-# Traer cambios de dev
-git merge dev
+# Traer cambios de main
+git merge main
 
 # Si hay conflictos, resuélvelos como arriba
 ```
@@ -255,7 +235,7 @@ git branch
 
 ```
 DÍA 1:
-  dev (actualizado)
+  main (actualizado)
     ↓
   feature/mi-tarea (creas rama)
     ↓
@@ -265,7 +245,7 @@ DÍA 1:
     ↓
   git push (subes al repo)
     ↓
-  Pull Request en GitHub
+  Pull Request en GitHub (feature → main)
 
 DÍA 2:
   Code Review (líder revisa)
@@ -278,9 +258,9 @@ DÍA 2:
     ↓
   Aprobación ✅
     ↓
-  Merge a dev
+  Merge a main
     ↓
-  git checkout dev
+  git checkout main
   git pull
   (ya tienes tu código + el de todos)
 
@@ -296,16 +276,16 @@ SIGUIENTE TAREA:
 - [ ] Mi código funciona (lo probé localmente)
 - [ ] No hay archivos innecesarios (node_modules, .env, archivos de editor)
 - [ ] Los mensajes de commit son descriptivos
-- [ ] Actualicé mi rama con dev (`git merge dev`)
+- [ ] Actualicé mi rama con main (`git merge main`)
 - [ ] Le agregué descripción clara al PR
-- [ ] Asigné un reviewer
+- [ ] Asigné un reviewer (el líder técnico)
 
 ---
 
 ## 🚫 Errores Comunes y Cómo Evitarlos
 
-### ❌ Error: "No tengo permisos para push a dev"
-**Solución:** Estás en la rama equivocada. Cambia a tu feature:
+### ❌ Error: "No tengo permisos para push a main"
+**Solución:** Estás en la rama equivocada. Nunca hagas push directo a main. Cambia a tu feature:
 ```bash
 git checkout feature/tu-rama
 git push
@@ -325,7 +305,7 @@ target/
 ### ❌ Error: "Dice que tengo conflictos pero no sé qué hacer"
 **Solución:** Pide ayuda al líder en pair programming. Es normal al inicio.
 
-### ❌ Error: "Hice commit en dev sin querer"
+### ❌ Error: "Hice commit en main sin querer"
 **Solución:** 
 ```bash
 # Deshacer el commit (mantener cambios)
@@ -348,7 +328,7 @@ git push -u origin feature/mi-tarea
 
 1. Crea una rama de prueba:
 ```bash
-git checkout dev
+git checkout main
 git pull
 git checkout -b feature/practica-tu-nombre
 ```
@@ -410,8 +390,8 @@ Si algo no funciona:
 
 ```bash
 # === INICIO DEL DÍA ===
-git checkout dev
-git pull origin dev
+git checkout main
+git pull origin main
 git checkout -b feature/mi-tarea
 
 # === TRABAJAR ===
@@ -423,23 +403,10 @@ git commit -m "descripción de cambios"
 git push -u origin feature/mi-tarea
 
 # === EN GITHUB ===
-Crear Pull Request → Asignar al líder → Esperar review
+Crear Pull Request (feature → main) → Asignar al líder → Esperar review
 
 # === DESPUÉS DEL MERGE ===
-git checkout dev
-git pull origin dev
+git checkout main
+git pull origin main
 ```
-
----
-
-## 🏆 Objetivo Final
-
-Al terminar el proyecto, deberías poder:
-- ✅ Crear ramas sin miedo
-- ✅ Hacer commits con mensajes claros
-- ✅ Resolver conflictos simples
-- ✅ Entender el historial de Git
-- ✅ Trabajar en paralelo sin bloquear al equipo
-
-**¡Git es tu amigo, no tu enemigo! Con práctica se vuelve natural 🚀**
 
