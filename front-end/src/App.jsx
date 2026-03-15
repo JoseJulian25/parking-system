@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { EspaciosPage } from "./pages/EspaciosPage";
 
 
 const LoginPage = () => <h1>Login</h1>;
 const DashboardPage = () => <h1>Dashboard</h1>;
 const EntradaPage = () => <h1>Entrada de Vehículos</h1>;
 const SalidaPage = () => <h1>Salida de Vehículos</h1>;
-const EspaciosPage = () => <h1>Gestión de Espacios</h1>;
 const ReservasPage = () => <h1>Reservas</h1>;
 const HistorialPage = () => <h1>Historial</h1>;
 const TarifasPage = () => <h1>Tarifas</h1>;
