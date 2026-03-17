@@ -9,28 +9,34 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const login = async (username, password) => {
-    try {
-      const response = await client.post("/auth/login", { username, password });
-      const data = response.data;
-      console.log("Respuesta login:", response.data);
+  try {
+    const response = await client.post("/auth/login", { username, password });
+    const data = response.data;
 
-      localStorage.setItem("authToken", data.token);
+    localStorage.setItem("authToken", data.token);
 
-      const userData = {
-        username: data.username,
-        nombre: data.nombre,
-        rol: data.rol,
-      };
+    const userData = {
+      username: data.username,
+      nombre: data.nombre,
+      rol: data.rol,
+    };
 
-      setUser(userData);
-      setIsAuthenticated(true);
+    setUser(userData);
+    setIsAuthenticated(true);
 
-      return true;
-    } catch (error) {
-      console.error("Error en login:", error);
-      return false;
-    }
-  };
+    return {
+      success: true,
+    };
+
+  } catch (error) {
+    console.error("Error en login:", error);
+
+    return {
+      success: false,
+      message: error || "Error al iniciar sesión",
+    };
+  }
+};
 
   const logout = () => {
     localStorage.removeItem("authToken");
