@@ -13,24 +13,22 @@ export const AuthProvider = ({ children }) => {
     const response = await client.post("/auth/login", { username, password });
     const data = response.data;
 
-    localStorage.setItem("authToken", data.token);
+  
 
     const userData = {
       username: data.username,
       nombre: data.nombre,
       rol: data.rol,
     };
+    localStorage.setItem("authToken", data.token);
+    localStorage.setItem("userData", JSON.stringify(userData));
 
     setUser(userData);
     setIsAuthenticated(true);
 
-    return {
-      success: true,
-    };
+    return {success: true};
 
   } catch (error) {
-    console.error("Error en login:", error);
-
     return {
       success: false,
       message: typeof error === "string" 
