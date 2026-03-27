@@ -8,6 +8,7 @@ export default function EspacioEstadoDialog({ espacio, onClose, onSave }) {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      setError("");
       await onSave(estado);
     } catch (err) {
       setError("Error al actualizar el estado");
@@ -35,7 +36,6 @@ export default function EspacioEstadoDialog({ espacio, onClose, onSave }) {
           <option value="LIBRE">Libre</option>
           <option value="OCUPADO">Ocupado</option>
           <option value="RESERVADO">Reservado</option>
-          <option value="MANTENIMIENTO">Mantenimiento</option>
         </select>
 
         <div className="flex justify-end gap-2">

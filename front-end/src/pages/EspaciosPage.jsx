@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { getEspacios, updateEstadoEspacio, addEspaciosLote } from "../api/espacios";
+
+import { getEspacios, updateEstadoEspacio, addEspaciosLote, deleteEspacio } from "../api/espacios";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -8,6 +9,7 @@ import { Button } from "../components/ui/button";
 
 import EspacioEstadoDialog from "../components/espacios/EspacioEstadoDialog";
 import AddEspaciosDialog from "../components/espacios/AddEspaciosDialog";
+
 
 import { Car, Bike, Settings, Plus } from "lucide-react";
 
@@ -30,7 +32,6 @@ export function EspaciosPage() {
       const data = await getEspacios();
       setEspacios(data);
       setError("");
-      con
     } catch (err) {
       setError("Error cargando espacios");
     } finally {
@@ -45,6 +46,10 @@ export function EspaciosPage() {
 
   const handleUpdateEstado = async (nuevoEstado) => {
     try {
+      if (nuevoEstado === selectedEspacio.estado) {
+      setOpenDialog(false);
+      return;
+    }
       await updateEstadoEspacio(selectedEspacio.id, nuevoEstado);
 
       setEspacios((prev) =>
@@ -78,6 +83,24 @@ const handleAddEspacios = async (data) => {
   }
 };
 
+const handleDeleteEspacio = async (id) => {
+  const confirmacion = window.confirm(
+    "¿Seguro que deseas eliminar este espacio? Esta acción no se puede deshacer."
+  );
+
+  if (!confirmacion) return;
+
+  try {
+    await deleteEspacio(id);
+
+    setEspacios((prev) => prev.filter((e) => e.id !== id));
+
+    setError("");
+  } catch (err) {
+    setError("No se puede eliminar el espacio. Puede estar en uso.");
+  }
+};
+
   const espaciosCarros = espacios.filter(
     (e) => e.tipoVehiculo === "CARRO"
   );
@@ -90,7 +113,6 @@ const handleAddEspacios = async (data) => {
     libre: espacios.filter((e) => e.estado === "LIBRE").length,
     ocupado: espacios.filter((e) => e.estado === "OCUPADO").length,
     reservado: espacios.filter((e) => e.estado === "RESERVADO").length,
-    mantenimiento: espacios.filter((e) => e.estado === "MANTENIMIENTO").length,
   };
 
   const getStatusColor = (estado) => {
@@ -101,8 +123,6 @@ const handleAddEspacios = async (data) => {
         return "bg-red-100 border-red-300";
       case "RESERVADO":
         return "bg-yellow-100 border-yellow-300";
-      case "MANTENIMIENTO":
-        return "bg-blue-100 border-blue-300";
       default:
         return "bg-gray-100 border-gray-300";
     }
@@ -114,10 +134,9 @@ const handleAddEspacios = async (data) => {
         return "secondary";
       case "OCUPADO":
         return "destructive";
-      case "RESERVADO":
+      case "":
         return "outline";
-      case "MANTENIMIENTO":
-        return "default";
+
       default:
         return "secondary";
     }
@@ -138,12 +157,21 @@ const handleAddEspacios = async (data) => {
                 space.estado
               )}`}
             >
-              <button
-                onClick={() => handleOpenDialog(space)}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition bg-black/70 text-white p-1 rounded"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                <button
+                  onClick={() => handleOpenDialog(space)} 
+                  className="bg-black/70 text-white p-1 rounded"
+                  >
+                  <Settings className="w-4 h-4" />
+                </button>
+                  {space.estado === "LIBRE" && (
+                <button
+                  onClick={() => handleDeleteEspacio(space.id)}
+                  className="bg-red-600 text-white p-1 rounded"
+                >✕
+                </button>
+              )}
+          </div>
 
               <div className="text-center">
                 <p className="text-2xl font-bold mb-1">
@@ -213,19 +241,13 @@ const handleAddEspacios = async (data) => {
           </p>
         </div>
 
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm">Reservados</p>
+        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm">Reservado</p>
           <p className="text-2xl font-bold text-yellow-700">
             {stats.reservado}
           </p>
         </div>
 
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm">Mantenimiento</p>
-          <p className="text-2xl font-bold text-blue-700">
-            {stats.mantenimiento}
-          </p>
-        </div>
       </div>
 
       <Card>

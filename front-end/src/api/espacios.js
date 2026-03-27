@@ -6,8 +6,14 @@ export const getEspacios = async () => {
 };
 
 export const updateEstadoEspacio = async (id, estado) => {
-  const { data } = await client.patch(`/espacios/${id}/estado`, { estado });
-  return data;
+  try {
+    const { data } = await client.patch(`/espacios/${id}/estado`, { estado });
+    console.log(data)
+    return data;
+  } catch (error) {
+    console.log("Error updateEstadoEspacio:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
 export const addEspaciosLote = async (data) => {
@@ -22,6 +28,11 @@ export const addEspaciosLote = async (data) => {
 };
 
 export const deleteEspacio = async (id) => {
-  const { data } = await client.delete(`/espacios/${id}`);
-  return data;
+  try {
+    const { data } = await client.delete(`/espacios/${id}`);
+    return data;
+  } catch (error) {
+    console.log("Error deleteEspacio:", error.response?.data || error.message);
+    throw error;
+  }
 };
