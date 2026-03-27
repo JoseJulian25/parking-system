@@ -7,3 +7,4 @@ export { Select, SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectL
 export { Badge } from './badge'
 export { Avatar, AvatarImage, AvatarFallback } from './avatar'
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip'
+export { Sheet, SheetTrigger, SheetClose, SheetContent } from './sheet'

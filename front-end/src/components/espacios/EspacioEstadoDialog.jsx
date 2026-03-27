@@ -10,7 +10,7 @@ export default function EspacioEstadoDialog({ espacio, onClose, onSave }) {
       setLoading(true);
       await onSave(estado);
     } catch (err) {
-      setError(err);
+      setError("Error al actualizar el estado");
     } finally {
       setLoading(false);
     }
@@ -35,16 +35,21 @@ export default function EspacioEstadoDialog({ espacio, onClose, onSave }) {
           <option value="LIBRE">Libre</option>
           <option value="OCUPADO">Ocupado</option>
           <option value="RESERVADO">Reservado</option>
+          <option value="MANTENIMIENTO">Mantenimiento</option>
         </select>
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose}>
+          <button 
+            onClick={onClose}
+            className="px-3 py-1 border rounded"
+          >
             Cancelar
           </button>
 
           <button
             onClick={handleSubmit}
-            className="bg-blue-600 text-white px-3 py-1 rounded"
+            disabled={loading}
+            className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
           >
             {loading ? "Guardando..." : "Guardar"}
           </button>

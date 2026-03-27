@@ -1,6 +1,7 @@
 package com.parking.exception;
 
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,24 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
 
         return build(HttpStatus.BAD_REQUEST, "Solicitud inválida", mensaje, request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex,
+                                                                HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Solicitud inválida", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ErrorResponse> handleNoSuchElement(NoSuchElementException ex,
+                                                              HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "No encontrado", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "Conflicto", ex.getMessage(), request);
     }
 
     // 500 - Cualquier excepción no controlada

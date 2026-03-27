@@ -32,8 +32,8 @@ public class Espacio {
     private Long id;
     
     @NotNull
-    @Column(nullable = false, unique = true)
-    private Integer numero;
+    @Column(name = "codigo_espacio", nullable = false, unique = true, length = 30)
+    private String codigoEspacio;
     
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tipo_vehiculo_id", nullable = false)

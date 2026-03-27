@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { getEspacios, updateEstadoEspacio } from "../api/espacios";
+import { getEspacios, updateEstadoEspacio, addEspaciosLote } from "../api/espacios";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Button } from "../components/ui/button";
 
 import EspacioEstadoDialog from "../components/espacios/EspacioEstadoDialog";
+import AddEspaciosDialog from "../components/espacios/AddEspaciosDialog";
 
-import { Car, Bike, Settings } from "lucide-react";
+import { Car, Bike, Settings, Plus } from "lucide-react";
 
 export function EspaciosPage() {
   const [espacios, setEspacios] = useState([]);
@@ -16,6 +18,7 @@ export function EspaciosPage() {
 
   const [selectedEspacio, setSelectedEspacio] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
 
   useEffect(() => {
     fetchEspacios();
@@ -27,8 +30,9 @@ export function EspaciosPage() {
       const data = await getEspacios();
       setEspacios(data);
       setError("");
+      con
     } catch (err) {
-      setError(err);
+      setError("Error cargando espacios");
     } finally {
       setLoading(false);
     }
@@ -53,10 +57,26 @@ export function EspaciosPage() {
       setSelectedEspacio(null);
       setError("");
     } catch (err) {
-      setError(err);
-      throw err; 
+      setError("Error actualizando estado");
+      throw err;
     }
   };
+
+const handleAddEspacios = async (data) => {
+  try {
+    await addEspaciosLote({
+      cantidadCarros: data.carros,
+      cantidadMotos: data.motos
+    });
+
+    await fetchEspacios();
+    setOpenAddDialog(false);
+
+  } catch (error) {
+    console.log(error);
+    setError("Error agregando espacios");
+  }
+};
 
   const espaciosCarros = espacios.filter(
     (e) => e.tipoVehiculo === "CARRO"
@@ -70,6 +90,7 @@ export function EspaciosPage() {
     libre: espacios.filter((e) => e.estado === "LIBRE").length,
     ocupado: espacios.filter((e) => e.estado === "OCUPADO").length,
     reservado: espacios.filter((e) => e.estado === "RESERVADO").length,
+    mantenimiento: espacios.filter((e) => e.estado === "MANTENIMIENTO").length,
   };
 
   const getStatusColor = (estado) => {
@@ -80,6 +101,8 @@ export function EspaciosPage() {
         return "bg-red-100 border-red-300";
       case "RESERVADO":
         return "bg-yellow-100 border-yellow-300";
+      case "MANTENIMIENTO":
+        return "bg-blue-100 border-blue-300";
       default:
         return "bg-gray-100 border-gray-300";
     }
@@ -93,6 +116,8 @@ export function EspaciosPage() {
         return "destructive";
       case "RESERVADO":
         return "outline";
+      case "MANTENIMIENTO":
+        return "default";
       default:
         return "secondary";
     }
@@ -151,13 +176,20 @@ export function EspaciosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">
-          Gestión de Espacios
-        </h1>
-        <p className="text-muted-foreground">
-          Vista en tiempo real del estado del parqueo
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">
+            Gestión de Espacios
+          </h1>
+          <p className="text-muted-foreground">
+            Vista en tiempo real del estado del parqueo
+          </p>
+        </div>
+
+        <Button onClick={() => setOpenAddDialog(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Agregar Espacios
+        </Button>
       </div>
 
       {error && (
@@ -166,7 +198,7 @@ export function EspaciosPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm">Libres</p>
           <p className="text-2xl font-bold text-green-700">
@@ -185,6 +217,13 @@ export function EspaciosPage() {
           <p className="text-sm">Reservados</p>
           <p className="text-2xl font-bold text-yellow-700">
             {stats.reservado}
+          </p>
+        </div>
+
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm">Mantenimiento</p>
+          <p className="text-2xl font-bold text-blue-700">
+            {stats.mantenimiento}
           </p>
         </div>
       </div>
@@ -226,6 +265,12 @@ export function EspaciosPage() {
           onSave={handleUpdateEstado}
         />
       )}
+
+      <AddEspaciosDialog
+        open={openAddDialog}
+        onClose={() => setOpenAddDialog(false)}
+        onSave={handleAddEspacios}
+      />
     </div>
   );
 }

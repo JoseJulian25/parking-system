@@ -1,9 +1,8 @@
 import axios from "axios";
 
-
 const client = axios.create({
-  baseURL: "http://localhost:8080", 
-  timeout: 10000, 
+  baseURL: "http://localhost:8080",
+  timeout: 10000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -13,9 +12,11 @@ const client = axios.create({
 client.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
+
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers["Authorization"] = "Bearer " + token;
     }
+
     return config;
   },
   (error) => {
@@ -24,29 +25,22 @@ client.interceptors.request.use(
 );
 
 client.interceptors.response.use(
-  (response) => response, 
+  (response) => response,
   (error) => {
     if (error.response) {
-
       if (error.response.status === 401) {
-
         localStorage.removeItem("authToken");
-        
+
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }
       }
 
-      return Promise.reject(
-        error.response.data?.message ||
-          "Ocurrió un error al procesar la solicitud."
-      );
+      return Promise.reject(error);
     } else if (error.request) {
-
-      return Promise.reject("No se pudo conectar con el servidor.");
+      return Promise.reject(error);
     } else {
-
-      return Promise.reject("Ocurrió un error inesperado.");
+      return Promise.reject(error);
     }
   }
 );

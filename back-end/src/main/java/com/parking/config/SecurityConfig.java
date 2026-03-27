@@ -47,6 +47,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/test/hello").permitAll()
+                .requestMatchers(HttpMethod.GET, "/espacios").hasAnyAuthority("ROLE_OPERADOR", "ROLE_operador", "ROLE_ADMIN", "ROLE_admin")
+                .requestMatchers(HttpMethod.GET, "/espacios/inactivos").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin")
+                .requestMatchers(HttpMethod.PATCH, "/espacios/*/estado").hasAnyAuthority("ROLE_OPERADOR", "ROLE_operador", "ROLE_ADMIN", "ROLE_admin")
+                .requestMatchers(HttpMethod.PATCH, "/espacios/*/activar").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin")
+                .requestMatchers(HttpMethod.POST, "/espacios/lote").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin")
+                .requestMatchers(HttpMethod.DELETE, "/espacios/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -107,7 +113,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:3000"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
