@@ -53,11 +53,9 @@ export const LoginPage = () => {
           <Card className="w-full max-w-md">
             <CardHeader className="space-y-1 text-center">
               <div className="flex justify-center mb-4">
-                <div className="p-3 bg-blue-600 rounded-full">
-                  <Car className="w-8 h-8 text-white" />
-                </div>
+                  <img className="w-20 h-20" src="icon.png" alt="" />
               </div>
-              <CardTitle className="text-2xl">Sistema de Gestión de Parqueo</CardTitle>
+              <CardTitle className="text-2xl">SmartPark</CardTitle>
               <CardDescription>
                 Ingrese sus credenciales para acceder al sistema
               </CardDescription>
