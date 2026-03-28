@@ -307,7 +307,7 @@ export const UsuariosPage = () => {
       {/* Encabezado */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Gestión de Usuarios</h1>
+          <h1 className="text-3xl font-bold mb-2">Gestión de Usuarios</h1>
         </div>
         <Button onClick={() => handleOpenDialog()}>
           <UserPlus className="w-4 h-4 mr-2" />
