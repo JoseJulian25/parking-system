@@ -16,6 +16,7 @@ INSERT INTO tipos_vehiculo (nombre) VALUES ('MOTO') ON CONFLICT (nombre) DO NOTH
 -- Estados de espacio
 INSERT INTO estados_espacio (nombre) VALUES ('LIBRE') ON CONFLICT (nombre) DO NOTHING;
 INSERT INTO estados_espacio (nombre) VALUES ('OCUPADO') ON CONFLICT (nombre) DO NOTHING;
+INSERT INTO estados_espacio (nombre) VALUES ('RESERVADO') ON CONFLICT (nombre) DO NOTHING;
 INSERT INTO estados_espacio (nombre) VALUES ('MANTENIMIENTO') ON CONFLICT (nombre) DO NOTHING;
 
 -- Estados de ticket
@@ -23,22 +24,28 @@ INSERT INTO estados_ticket (nombre) VALUES ('ACTIVO') ON CONFLICT (nombre) DO NO
 INSERT INTO estados_ticket (nombre) VALUES ('CERRADO') ON CONFLICT (nombre) DO NOTHING;
 
 -- Usuarios base
-INSERT INTO usuarios (username, nombre, password, rol_id, activo)
+INSERT INTO usuarios (username, nombre, password, rol_id, activo, eliminado, fecha_creacion, fecha_eliminacion)
 VALUES (
     'admin',
     'Administrador',
     '$2a$10$VufadKFm1fm/8GKTIn87MugS.QyQbs3WXm3/s84nbtLF1dy1Po7L2',
     (SELECT id FROM roles WHERE nombre = 'ADMIN'),
-    true
+    true,
+    false,
+    NOW(),
+    NULL
 ) ON CONFLICT (username) DO NOTHING;
 
-INSERT INTO usuarios (username, nombre, password, rol_id, activo)
+INSERT INTO usuarios (username, nombre, password, rol_id, activo, eliminado, fecha_creacion,fecha_eliminacion)
 VALUES (
     'operador',
     'Operador',
     '$2a$10$I045ZWAtaN1EyWYNIUxN7ec3kVm4hRkzl3X47j.gdLSc97HnbCMfW',
     (SELECT id FROM roles WHERE nombre = 'OPERADOR'),
-    true
+    true,
+    false,
+    NOW()
+    ,NULL
 ) ON CONFLICT (username) DO NOTHING;
 
 -- Espacios base
