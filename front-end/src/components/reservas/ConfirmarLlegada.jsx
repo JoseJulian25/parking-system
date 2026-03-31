@@ -1,51 +1,32 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
 import {
-  crearReserva,
-  getEspaciosDisponibles
+  buscarReservaPorCodigo,
+  confirmarLlegada
 } from "../../api/reservas";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Label } from "../ui/label";
 import { Alert, AlertDescription } from "../ui/alert";
+import { Badge } from "../ui/badge";
 
-export default function CrearReserva({ onSuccess }) {
+export default function ConfirmarLlegada({ onSuccess }) {
 
-  const [placa, setPlaca] = useState("");
-  const [tipoVehiculo, setTipoVehiculo] = useState("carro");
-  const [fechaReserva, setFechaReserva] = useState("");
-  const [horaReserva, setHoraReserva] = useState("");
-
-  const [espacios, setEspacios] = useState({
-    carros: 0,
-    motos: 0
-  });
+  const [codigo, setCodigo] = useState("");
+  const [reserva, setReserva] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const fetchEspacios = async () => {
-    try {
-      const data = await getEspaciosDisponibles();
-      setEspacios(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchEspacios();
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleBuscar = async () => {
 
     setError("");
     setSuccess("");
+    setReserva(null);
 
-    if (!placa || !fechaReserva || !horaReserva) {
-      setError("Complete todos los campos");
+    if (!codigo) {
+      setError("Ingrese código de reserva");
       return;
     }
 
@@ -53,20 +34,31 @@ export default function CrearReserva({ onSuccess }) {
 
       setLoading(true);
 
-      await crearReserva({
-        placa,
-        tipoVehiculo,
-        fechaReserva,
-        horaReserva
-      });
+      const data = await buscarReservaPorCodigo(codigo);
 
-      setSuccess("Reserva creada correctamente");
+      setReserva(data);
 
-      setPlaca("");
-      setFechaReserva("");
-      setHoraReserva("");
+    } catch (err) {
+      console.error(err);
+      setError("Reserva no encontrada");
+    } finally {
+      setLoading(false);
+    }
 
-      fetchEspacios();
+  };
+
+
+  const handleConfirmar = async () => {
+
+    try {
+
+      setLoading(true);
+
+      await confirmarLlegada(codigo);
+
+      setSuccess("Llegada confirmada correctamente");
+      setReserva(null);
+      setCodigo("");
 
       if (onSuccess) {
         onSuccess();
@@ -74,117 +66,94 @@ export default function CrearReserva({ onSuccess }) {
 
     } catch (err) {
       console.error(err);
-      setError("Error creando reserva");
+      setError("Error confirmando llegada");
     } finally {
       setLoading(false);
     }
+
   };
+
+
 
   return (
 
     <div className="bg-white p-6 rounded-lg shadow">
 
       <h2 className="text-lg font-semibold mb-4">
-        Crear Reserva
+        Confirmar Llegada
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
 
-        <div>
+      <div className="flex gap-2 mb-4">
 
-          <Label>Placa</Label>
-
-          <Input
-            value={placa}
-            onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-            placeholder="ABC123"
-          />
-
-        </div>
-
-
-        <div>
-
-          <Label>Tipo Vehículo</Label>
-
-          <select
-            className="w-full border rounded p-2"
-            value={tipoVehiculo}
-            onChange={(e) => setTipoVehiculo(e.target.value)}
-          >
-
-            <option value="carro">Carro</option>
-            <option value="moto">Moto</option>
-
-          </select>
-
-        </div>
-
-
-        <div>
-
-          <Label>Fecha</Label>
-
-          <Input
-            type="date"
-            value={fechaReserva}
-            onChange={(e) => setFechaReserva(e.target.value)}
-          />
-
-        </div>
-
-
-        <div>
-
-          <Label>Hora</Label>
-
-          <Input
-            type="time"
-            value={horaReserva}
-            onChange={(e) => setHoraReserva(e.target.value)}
-          />
-
-        </div>
-
-
-        {/* Espacios disponibles */}
-
-        <div className="text-sm text-gray-500">
-
-          Carros disponibles: {espacios.carros} | 
-          Motos disponibles: {espacios.motos}
-
-        </div>
-
-
-        {error && (
-
-          <Alert variant="destructive">
-            <AlertDescription>
-              {error}
-            </AlertDescription>
-          </Alert>
-
-        )}
-
-        {success && (
-
-          <Alert>
-            <AlertDescription>
-              {success}
-            </AlertDescription>
-          </Alert>
-
-        )}
+        <Input
+          placeholder="Código Reserva"
+          value={codigo}
+          onChange={(e) => setCodigo(e.target.value)}
+        />
 
         <Button
-          className="w-full"
+          onClick={handleBuscar}
           disabled={loading}
         >
-          {loading ? "Creando..." : "Crear Reserva"}
+          Buscar
         </Button>
 
-      </form>
+      </div>
+
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
+
+      {success && (
+        <Alert>
+          <AlertDescription>
+            {success}
+          </AlertDescription>
+        </Alert>
+      )}
+
+
+      {reserva && (
+
+        <div className="border rounded-lg p-4 space-y-3">
+
+          <div>
+            <strong>Placa:</strong> {reserva.placa}
+          </div>
+
+          <div>
+            <strong>Tipo:</strong> 
+            <Badge className="ml-2">
+              {reserva.tipoVehiculo}
+            </Badge>
+          </div>
+
+          <div>
+            <strong>Fecha:</strong> {reserva.fechaReserva}
+          </div>
+
+          <div>
+            <strong>Hora:</strong> {reserva.horaReserva}
+          </div>
+
+          <Button
+            className="w-full"
+            onClick={handleConfirmar}
+            disabled={loading}
+          >
+            Confirmar Llegada
+          </Button>
+
+        </div>
+
+      )}
 
     </div>
 

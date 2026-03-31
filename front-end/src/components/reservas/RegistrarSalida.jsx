@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import {
   buscarReservaPorCodigo,
-  confirmarLlegada
+  registrarSalida
 } from "../../api/reservas";
 
 import { Button } from "../ui/button";
@@ -10,7 +10,7 @@ import { Input } from "../ui/input";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Badge } from "../ui/badge";
 
-export default function ConfirmarLlegada({ onSuccess }) {
+export default function RegistrarSalida({ onSuccess }) {
 
   const [codigo, setCodigo] = useState("");
   const [reserva, setReserva] = useState(null);
@@ -18,6 +18,7 @@ export default function ConfirmarLlegada({ onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
 
   const handleBuscar = async () => {
 
@@ -48,15 +49,15 @@ export default function ConfirmarLlegada({ onSuccess }) {
   };
 
 
-  const handleConfirmar = async () => {
+  const handleSalida = async () => {
 
     try {
 
       setLoading(true);
 
-      await confirmarLlegada(codigo);
+      await registrarSalida(codigo);
 
-      setSuccess("Llegada confirmada correctamente");
+      setSuccess("Salida registrada correctamente");
       setReserva(null);
       setCodigo("");
 
@@ -66,7 +67,7 @@ export default function ConfirmarLlegada({ onSuccess }) {
 
     } catch (err) {
       console.error(err);
-      setError("Error confirmando llegada");
+      setError("Error registrando salida");
     } finally {
       setLoading(false);
     }
@@ -74,15 +75,13 @@ export default function ConfirmarLlegada({ onSuccess }) {
   };
 
 
-
   return (
 
     <div className="bg-white p-6 rounded-lg shadow">
 
       <h2 className="text-lg font-semibold mb-4">
-        Confirmar Llegada
+        Registrar Salida
       </h2>
-
 
       <div className="flex gap-2 mb-4">
 
@@ -145,10 +144,10 @@ export default function ConfirmarLlegada({ onSuccess }) {
 
           <Button
             className="w-full"
-            onClick={handleConfirmar}
+            onClick={handleSalida}
             disabled={loading}
           >
-            Confirmar Llegada
+            Registrar Salida
           </Button>
 
         </div>

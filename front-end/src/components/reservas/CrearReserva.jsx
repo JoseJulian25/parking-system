@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import {
   crearReserva,
   getEspaciosDisponibles
@@ -7,12 +8,13 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
 
 export default function CrearReserva({ onSuccess }) {
 
   const [placa, setPlaca] = useState("");
-  const [tipoVehiculo, setTipoVehiculo] = useState("carro");
+  const [tipoVehiculo, setTipoVehiculo] = useState("CARRO");
   const [fechaReserva, setFechaReserva] = useState("");
   const [horaReserva, setHoraReserva] = useState("");
 
@@ -29,8 +31,9 @@ export default function CrearReserva({ onSuccess }) {
     try {
       const data = await getEspaciosDisponibles();
       setEspacios(data);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+      setError("Error cargando espacios disponibles");
     }
   };
 
@@ -41,17 +44,11 @@ export default function CrearReserva({ onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    setError("");
-    setSuccess("");
-
-    if (!placa || !fechaReserva || !horaReserva) {
-      setError("Complete todos los campos");
-      return;
-    }
-
     try {
 
       setLoading(true);
+      setError("");
+      setSuccess("");
 
       await crearReserva({
         placa,
@@ -82,112 +79,163 @@ export default function CrearReserva({ onSuccess }) {
 
   return (
 
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Espacios para Carros
+            </CardTitle>
+          </CardHeader>
 
-      <h2 className="text-lg font-semibold mb-4">
-        Crear Reserva
-      </h2>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {espacios.carros}
+            </div>
+            <p className="text-sm text-gray-500">
+              disponibles
+            </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+          </CardContent>
 
-        <div>
-
-          <Label>Placa</Label>
-
-          <Input
-            value={placa}
-            onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-            placeholder="ABC123"
-          />
-
-        </div>
+        </Card>
 
 
-        <div>
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Espacios para Motos
+            </CardTitle>
+          </CardHeader>
 
-          <Label>Tipo Vehículo</Label>
+          <CardContent>
 
-          <select
-            className="w-full border rounded p-2"
-            value={tipoVehiculo}
-            onChange={(e) => setTipoVehiculo(e.target.value)}
+            <div className="text-3xl font-bold">
+              {espacios.motos}
+            </div>
+
+            <p className="text-sm text-gray-500">
+              disponibles
+            </p>
+
+          </CardContent>
+        </Card>
+      </div>
+      <Card>
+
+        <CardHeader>
+          <CardTitle>
+            Nueva Reserva
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
+
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4"
           >
+            <div>
 
-            <option value="carro">Carro</option>
-            <option value="moto">Moto</option>
+              <Label>
+                Placa del Vehículo
+              </Label>
+              <Input
+                value={placa}
+                onChange={(e) =>
+                  setPlaca(e.target.value.toUpperCase())
+                }
+                required
+              />
+            </div>
 
-          </select>
+            <div>
+              <Label>
+                Tipo de Vehículo
+              </Label>
+              <div className="flex gap-6 mt-2">
 
-        </div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="CARRO"
+                    checked={tipoVehiculo === "CARRO"}
+                    onChange={(e) =>
+                      setTipoVehiculo(e.target.value)
+                    }
+                  />
+                  Carro
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="MOTO"
+                    checked={tipoVehiculo === "MOTO"}
+                    onChange={(e) =>
+                      setTipoVehiculo(e.target.value)
+                    }
+                  />
+                  Moto
+                </label>
+              </div>
+            </div>
+            <div>
+              <Label>
+                Fecha Reserva
+              </Label>
+              <Input
+                type="date"
+                value={fechaReserva}
+                onChange={(e) =>
+                  setFechaReserva(e.target.value)
+                }
+                required
+              />
 
+            </div>
 
-        <div>
+            <div>
 
-          <Label>Fecha</Label>
+              <Label>
+                Hora Reserva
+              </Label>
 
-          <Input
-            type="date"
-            value={fechaReserva}
-            onChange={(e) => setFechaReserva(e.target.value)}
-          />
+              <Input
+                type="time"
+                value={horaReserva}
+                onChange={(e) =>
+                  setHoraReserva(e.target.value)
+                }
+                required
+              />
 
-        </div>
+            </div>
 
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
 
-        <div>
-
-          <Label>Hora</Label>
-
-          <Input
-            type="time"
-            value={horaReserva}
-            onChange={(e) => setHoraReserva(e.target.value)}
-          />
-
-        </div>
-
-
-        {/* Espacios disponibles */}
-
-        <div className="text-sm text-gray-500">
-
-          Carros disponibles: {espacios.carros} | 
-          Motos disponibles: {espacios.motos}
-
-        </div>
-
-
-        {error && (
-
-          <Alert variant="destructive">
-            <AlertDescription>
-              {error}
-            </AlertDescription>
-          </Alert>
-
-        )}
-
-        {success && (
-
-          <Alert>
-            <AlertDescription>
-              {success}
-            </AlertDescription>
-          </Alert>
-
-        )}
-
-        <Button
-          className="w-full"
-          disabled={loading}
-        >
-          {loading ? "Creando..." : "Crear Reserva"}
-        </Button>
-
-      </form>
-
+            {success && (
+              <Alert>
+                <AlertDescription>
+                  {success}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Button
+              className="w-full"
+              disabled={loading}
+            >
+              Crear Reserva
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
-
   );
 
 }

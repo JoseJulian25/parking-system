@@ -1,88 +1,77 @@
-import { useEffect, useState } from "react";
-
-import {
-  getReservasActivas,
-  getReservasPendientes,
-  getHistorialReservas
-} from "../api/reservas";
+import { useState } from "react";
 
 import CrearReserva from "../components/reservas/CrearReserva";
 import ConfirmarLlegada from "../components/reservas/ConfirmarLlegada";
-import RegistrarSalida from "../components/reservas/RegistrarSalida";
 import ListaReservas from "../components/reservas/ListaReservas";
+
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "../components/ui/tabs";
 
 export const ReservasPage = () => {
 
-  const [reservasActivas, setReservasActivas] = useState([]);
-  const [reservasPendientes, setReservasPendientes] = useState([]);
-  const [historial, setHistorial] = useState([]);
+  const [refresh, setRefresh] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const fetchReservas = async () => {
-    try {
-      setLoading(true);
-
-      const [
-        activas,
-        pendientes,
-        historialData
-      ] = await Promise.all([
-        getReservasActivas(),
-        getReservasPendientes(),
-        getHistorialReservas()
-      ]);
-
-      setReservasActivas(activas);
-      setReservasPendientes(pendientes);
-      setHistorial(historialData);
-
-    } catch (err) {
-      console.error(err);
-      setError("Error cargando reservas");
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = () => {
+    setRefresh(!refresh);
   };
 
-  useEffect(() => {
-    fetchReservas();
-  }, []);
-
-  // Loading
-  if (loading) {
-    return (
-      <div className="p-6 text-center">
-        Cargando reservas...
-      </div>
-    );
-  }
-
-  // Error
-  if (error) {
-    return (
-      <div className="p-6 text-center text-red-500">
-        {error}
-      </div>
-    );
-  }
-
   return (
+
     <div className="space-y-6">
 
-      <CrearReserva onSuccess={fetchReservas} />
+      <div>
+        <h1 className="text-2xl font-semibold">
+          Gestión de Reservas
+        </h1>
 
-      <ConfirmarLlegada onSuccess={fetchReservas} />
+        <p className="text-gray-500">
+          Cree, confirme y administre las reservas del parqueo
+        </p>
+      </div>
 
-      <RegistrarSalida onSuccess={fetchReservas} />
-      <ListaReservas
-        activas={reservasActivas}
-        pendientes={reservasPendientes}
-        historial={historial}
-        refresh={fetchReservas}
-      />
+
+      <Tabs defaultValue="crear" className="space-y-4">
+
+        <TabsList>
+
+          <TabsTrigger value="crear">
+            Crear Reserva
+          </TabsTrigger>
+
+          <TabsTrigger value="confirmar">
+            Confirmar Llegada
+          </TabsTrigger>
+
+          <TabsTrigger value="activas">
+            Reservas Activas
+          </TabsTrigger>
+
+        </TabsList>
+
+
+        <TabsContent value="crear">
+          <CrearReserva onSuccess={handleRefresh} />
+        </TabsContent>
+
+
+        <TabsContent value="confirmar">
+          <ConfirmarLlegada onSuccess={handleRefresh} />
+        </TabsContent>
+
+
+        <TabsContent value="activas">
+          <ListaReservas refresh={refresh} />
+        </TabsContent>
+
+
+      </Tabs>
 
     </div>
+
   );
+
 }

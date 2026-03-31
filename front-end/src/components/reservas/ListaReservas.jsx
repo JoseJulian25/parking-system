@@ -1,161 +1,135 @@
-import { useState } from "react";
-
-import {
-  buscarReservaPorCodigo,
-  registrarSalida
-} from "../../api/reservas";
-
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Alert, AlertDescription } from "../ui/alert";
 import { Badge } from "../ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
-export default function RegistrarSalida({ onSuccess }) {
+export default function ListaReservas({
+  activas = [],
+  pendientes = [],
+  historial = []
+}) {
 
-  const [codigo, setCodigo] = useState("");
-  const [reserva, setReserva] = useState(null);
+  const renderEstado = (estado) => {
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+    const colors = {
+      activa: "bg-green-500",
+      pendiente: "bg-yellow-500",
+      finalizada: "bg-gray-500",
+      cancelada: "bg-red-500"
+    };
 
-
-  const handleBuscar = async () => {
-
-    setError("");
-    setSuccess("");
-    setReserva(null);
-
-    if (!codigo) {
-      setError("Ingrese código de reserva");
-      return;
-    }
-
-    try {
-
-      setLoading(true);
-
-      const data = await buscarReservaPorCodigo(codigo);
-
-      setReserva(data);
-
-    } catch (err) {
-      console.error(err);
-      setError("Reserva no encontrada");
-    } finally {
-      setLoading(false);
-    }
-
+    return (
+      <Badge className={colors[estado] || "bg-gray-500"}>
+        {estado}
+      </Badge>
+    );
   };
 
+  const renderTabla = (data) => {
 
-  const handleSalida = async () => {
-
-    try {
-
-      setLoading(true);
-
-      await registrarSalida(codigo);
-
-      setSuccess("Salida registrada correctamente");
-      setReserva(null);
-      setCodigo("");
-
-      if (onSuccess) {
-        onSuccess();
-      }
-
-    } catch (err) {
-      console.error(err);
-      setError("Error registrando salida");
-    } finally {
-      setLoading(false);
+    if (!data.length) {
+      return (
+        <div className="text-center py-4 text-gray-500">
+          Sin registros
+        </div>
+      );
     }
 
+    return (
+      <table className="w-full text-sm">
+
+        <thead>
+          <tr className="border-b">
+            <th className="text-left p-2">Código</th>
+            <th className="text-left p-2">Placa</th>
+            <th className="text-left p-2">Tipo</th>
+            <th className="text-left p-2">Fecha</th>
+            <th className="text-left p-2">Hora</th>
+            <th className="text-left p-2">Estado</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {data.map((reserva) => (
+
+            <tr
+              key={reserva.id}
+              className="border-b hover:bg-gray-50"
+            >
+
+              <td className="p-2">
+                {reserva.codigo}
+              </td>
+
+              <td className="p-2">
+                {reserva.placa}
+              </td>
+
+              <td className="p-2">
+                {reserva.tipoVehiculo}
+              </td>
+
+              <td className="p-2">
+                {reserva.fechaReserva}
+              </td>
+
+              <td className="p-2">
+                {reserva.horaReserva}
+              </td>
+
+              <td className="p-2">
+                {renderEstado(reserva.estado)}
+              </td>
+
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
+    );
   };
 
 
   return (
 
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="space-y-6">
+      <Card>
 
-      <h2 className="text-lg font-semibold mb-4">
-        Registrar Salida
-      </h2>
+        <CardHeader>
+          <CardTitle>
+            Reservas Activas
+          </CardTitle>
+        </CardHeader>
 
-      <div className="flex gap-2 mb-4">
+        <CardContent>
+          {renderTabla(activas)}
+        </CardContent>
 
-        <Input
-          placeholder="Código Reserva"
-          value={codigo}
-          onChange={(e) => setCodigo(e.target.value)}
-        />
+      </Card>
 
-        <Button
-          onClick={handleBuscar}
-          disabled={loading}
-        >
-          Buscar
-        </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Reservas Pendientes
+          </CardTitle>
+        </CardHeader>
 
-      </div>
+        <CardContent>
+          {renderTabla(pendientes)}
+        </CardContent>
 
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
-
-
-      {success && (
-        <Alert>
-          <AlertDescription>
-            {success}
-          </AlertDescription>
-        </Alert>
-      )}
-
-
-      {reserva && (
-
-        <div className="border rounded-lg p-4 space-y-3">
-
-          <div>
-            <strong>Placa:</strong> {reserva.placa}
-          </div>
-
-          <div>
-            <strong>Tipo:</strong> 
-            <Badge className="ml-2">
-              {reserva.tipoVehiculo}
-            </Badge>
-          </div>
-
-          <div>
-            <strong>Fecha:</strong> {reserva.fechaReserva}
-          </div>
-
-          <div>
-            <strong>Hora:</strong> {reserva.horaReserva}
-          </div>
-
-          <Button
-            className="w-full"
-            onClick={handleSalida}
-            disabled={loading}
-          >
-            Registrar Salida
-          </Button>
-
-        </div>
-
-      )}
-
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Historial
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {renderTabla(historial)}
+        </CardContent>
+      </Card>
     </div>
-
   );
-
 }
