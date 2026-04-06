@@ -18,10 +18,12 @@ export default function CrearReserva({ onSuccess }) {
   const [fechaReserva, setFechaReserva] = useState("");
   const [horaReserva, setHoraReserva] = useState("");
 
-  const [espacios, setEspacios] = useState({
-    carros: 0,
-    motos: 0
-  });
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState("CEDULA");
+  const [documento, setDocumento] = useState("");
+
+  const [espacios, setEspacios] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,7 +56,11 @@ export default function CrearReserva({ onSuccess }) {
         placa,
         tipoVehiculo,
         fechaReserva,
-        horaReserva
+        horaReserva,
+        clienteNombre: nombre,
+        clienteApellido: apellido,
+        clienteDocumento: documento,
+        tipoDocumento
       });
 
       setSuccess("Reserva creada correctamente");
@@ -62,6 +68,9 @@ export default function CrearReserva({ onSuccess }) {
       setPlaca("");
       setFechaReserva("");
       setHoraReserva("");
+      setNombre("");
+      setApellido("");
+      setDocumento("");
 
       fetchEspacios();
 
@@ -77,10 +86,20 @@ export default function CrearReserva({ onSuccess }) {
     }
   };
 
+  const carrosDisponibles = espacios.filter(
+    e => e.tipo === "CARRO" && e.estado === "LIBRE"
+  ).length;
+
+  const motosDisponibles = espacios.filter(
+    e => e.tipo === "MOTO" && e.estado === "LIBRE"
+  ).length;
+
   return (
 
     <div className="space-y-6">
+
       <div className="grid grid-cols-2 gap-4">
+
         <Card>
           <CardHeader>
             <CardTitle>
@@ -90,16 +109,13 @@ export default function CrearReserva({ onSuccess }) {
 
           <CardContent>
             <div className="text-3xl font-bold">
-              {espacios.carros}
+              {carrosDisponibles}
             </div>
             <p className="text-sm text-gray-500">
               disponibles
             </p>
-
           </CardContent>
-
         </Card>
-
 
         <Card>
           <CardHeader>
@@ -109,18 +125,17 @@ export default function CrearReserva({ onSuccess }) {
           </CardHeader>
 
           <CardContent>
-
             <div className="text-3xl font-bold">
-              {espacios.motos}
+              {motosDisponibles}
             </div>
-
             <p className="text-sm text-gray-500">
               disponibles
             </p>
-
           </CardContent>
         </Card>
+
       </div>
+
       <Card>
 
         <CardHeader>
@@ -135,11 +150,67 @@ export default function CrearReserva({ onSuccess }) {
             onSubmit={handleSubmit}
             className="space-y-4"
           >
-            <div>
 
+            <div>
+              <Label>Nombre</Label>
+              <Input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label>Apellido</Label>
+              <Input
+                value={apellido}
+                onChange={(e) => setApellido(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label>Tipo Documento</Label>
+
+              <div className="flex gap-6 mt-2">
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="CEDULA"
+                    checked={tipoDocumento === "CEDULA"}
+                    onChange={(e) => setTipoDocumento(e.target.value)}
+                  />
+                  Cédula
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="PASAPORTE"
+                    checked={tipoDocumento === "PASAPORTE"}
+                    onChange={(e) => setTipoDocumento(e.target.value)}
+                  />
+                  Pasaporte
+                </label>
+
+              </div>
+            </div>
+
+            <div>
               <Label>
-                Placa del Vehículo
+                {tipoDocumento === "CEDULA" ? "Cédula" : "Pasaporte"}
               </Label>
+
+              <Input
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label>Placa del Vehículo</Label>
               <Input
                 value={placa}
                 onChange={(e) =>
@@ -150,9 +221,8 @@ export default function CrearReserva({ onSuccess }) {
             </div>
 
             <div>
-              <Label>
-                Tipo de Vehículo
-              </Label>
+              <Label>Tipo de Vehículo</Label>
+
               <div className="flex gap-6 mt-2">
 
                 <label className="flex items-center gap-2">
@@ -166,6 +236,7 @@ export default function CrearReserva({ onSuccess }) {
                   />
                   Carro
                 </label>
+
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
@@ -177,12 +248,13 @@ export default function CrearReserva({ onSuccess }) {
                   />
                   Moto
                 </label>
+
               </div>
+
             </div>
+
             <div>
-              <Label>
-                Fecha Reserva
-              </Label>
+              <Label>Fecha Reserva</Label>
               <Input
                 type="date"
                 value={fechaReserva}
@@ -191,14 +263,10 @@ export default function CrearReserva({ onSuccess }) {
                 }
                 required
               />
-
             </div>
 
             <div>
-
-              <Label>
-                Hora Reserva
-              </Label>
+              <Label>Hora Reserva</Label>
 
               <Input
                 type="time"
@@ -208,7 +276,6 @@ export default function CrearReserva({ onSuccess }) {
                 }
                 required
               />
-
             </div>
 
             {error && (
@@ -226,16 +293,22 @@ export default function CrearReserva({ onSuccess }) {
                 </AlertDescription>
               </Alert>
             )}
+
             <Button
               className="w-full"
               disabled={loading}
             >
               Crear Reserva
             </Button>
+
           </form>
+
         </CardContent>
+
       </Card>
+
     </div>
+
   );
 
 }

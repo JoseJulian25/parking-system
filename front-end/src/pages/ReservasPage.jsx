@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import CrearReserva from "../components/reservas/CrearReserva";
 import ConfirmarLlegada from "../components/reservas/ConfirmarLlegada";
@@ -11,13 +11,38 @@ import {
   TabsTrigger
 } from "../components/ui/tabs";
 
+import axios from "axios";
+
 export const ReservasPage = () => {
 
   const [refresh, setRefresh] = useState(false);
+  const [espacios, setEspacios] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const handleRefresh = () => {
     setRefresh(!refresh);
   };
+
+  const fetchEspacios = async () => {
+    try {
+      setLoading(true);
+
+      const response = await axios.get(
+        "http://localhost:8080/reservas/espacios"
+      );
+
+      setEspacios(response.data);
+
+    } catch (error) {
+      console.error("Error obteniendo espacios", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEspacios();
+  }, [refresh]);
 
   return (
 
@@ -32,7 +57,6 @@ export const ReservasPage = () => {
           Cree, confirme y administre las reservas del parqueo
         </p>
       </div>
-
 
       <Tabs defaultValue="crear" className="space-y-4">
 
@@ -52,21 +76,25 @@ export const ReservasPage = () => {
 
         </TabsList>
 
-
         <TabsContent value="crear">
-          <CrearReserva onSuccess={handleRefresh} />
+          <CrearReserva 
+            espacios={espacios}
+            loading={loading}
+            onSuccess={handleRefresh} 
+          />
         </TabsContent>
-
 
         <TabsContent value="confirmar">
-          <ConfirmarLlegada onSuccess={handleRefresh} />
+          <ConfirmarLlegada 
+            onSuccess={handleRefresh} 
+          />
         </TabsContent>
-
 
         <TabsContent value="activas">
-          <ListaReservas refresh={refresh} />
+          <ListaReservas 
+            refresh={refresh} 
+          />
         </TabsContent>
-
 
       </Tabs>
 
@@ -74,4 +102,4 @@ export const ReservasPage = () => {
 
   );
 
-}
+};
