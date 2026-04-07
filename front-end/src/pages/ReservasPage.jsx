@@ -10,8 +10,7 @@ import {
   TabsList,
   TabsTrigger
 } from "../components/ui/tabs";
-
-import axios from "axios";
+import client from "../api/client";
 
 export const ReservasPage = () => {
 
@@ -23,22 +22,22 @@ export const ReservasPage = () => {
     setRefresh(!refresh);
   };
 
-  const fetchEspacios = async () => {
-    try {
-      setLoading(true);
 
-      const response = await axios.get(
-        "http://localhost:8080/reservas/espacios"
-      );
 
-      setEspacios(response.data);
+const fetchEspacios = async () => {
+  try {
+    setLoading(true);
 
-    } catch (error) {
-      console.error("Error obteniendo espacios", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const response = await client.get("/espacios");
+
+    setEspacios(response.data);
+
+  } catch (error) {
+    console.error("Error obteniendo espacios", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchEspacios();

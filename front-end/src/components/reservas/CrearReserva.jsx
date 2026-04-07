@@ -84,15 +84,16 @@ export default function CrearReserva({ onSuccess }) {
     } finally {
       setLoading(false);
     }
+
   };
 
   const carrosDisponibles = espacios.filter(
-    e => e.tipo === "CARRO" && e.estado === "LIBRE"
-  ).length;
+  e => e.tipoVehiculo === "CARRO" && e.estado === "LIBRE"
+).length;
 
-  const motosDisponibles = espacios.filter(
-    e => e.tipo === "MOTO" && e.estado === "LIBRE"
-  ).length;
+const motosDisponibles = espacios.filter(
+  e => e.tipoVehiculo === "MOTO" && e.estado === "LIBRE"
+).length;
 
   return (
 

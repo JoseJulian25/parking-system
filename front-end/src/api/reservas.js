@@ -1,7 +1,7 @@
 import client from "./client";
 
 export const getEspaciosDisponibles = async () => {
-  const { data } = await client.get("/reservas/espacios");
+  const { data } = await client.get("/espacios");
   return data;
 };
 
