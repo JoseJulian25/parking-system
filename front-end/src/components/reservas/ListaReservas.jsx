@@ -1,135 +1,212 @@
-import { Badge } from "../ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useEffect, useState } from "react";
 
-export default function ListaReservas({
-  activas = [],
-  pendientes = [],
-  historial = []
-}) {
+import {
+  getReservasPendientes,
+  getReservasActivas,
+  getHistorialReservas,
+  confirmarLlegada,
+  registrarSalida,
+  cancelarReserva
+} from "../../api/reservas";
 
-  const renderEstado = (estado) => {
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "../ui/card";
 
-    const colors = {
-      activa: "bg-green-500",
-      pendiente: "bg-yellow-500",
-      finalizada: "bg-gray-500",
-      cancelada: "bg-red-500"
-    };
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "../ui/table";
 
-    return (
-      <Badge className={colors[estado] || "bg-gray-500"}>
-        {estado}
-      </Badge>
-    );
-  };
+import { Button } from "../ui/button";
 
-  const renderTabla = (data) => {
+export default function ListaReservas() {
 
-    if (!data.length) {
-      return (
-        <div className="text-center py-4 text-gray-500">
-          Sin registros
-        </div>
-      );
+  const [reservas, setReservas] = useState([]);
+  const [filtro, setFiltro] = useState("pendientes");
+
+ const fetchReservas = async () => {
+  try {
+
+    let data = [];
+
+    if (filtro === "pendientes") {
+      data = await getReservasPendientes();
     }
 
-    return (
-      <table className="w-full text-sm">
+    if (filtro === "activas") {
+      data = await getReservasActivas();
+    }
 
-        <thead>
-          <tr className="border-b">
-            <th className="text-left p-2">Código</th>
-            <th className="text-left p-2">Placa</th>
-            <th className="text-left p-2">Tipo</th>
-            <th className="text-left p-2">Fecha</th>
-            <th className="text-left p-2">Hora</th>
-            <th className="text-left p-2">Estado</th>
-          </tr>
-        </thead>
+    if (filtro === "historial") {
+      data = await getHistorialReservas();
+    }
 
-        <tbody>
+    console.log("Reservas:", data);
 
-          {data.map((reserva) => (
+    setReservas(data.data || data || []);
 
-            <tr
-              key={reserva.id}
-              className="border-b hover:bg-gray-50"
-            >
+  } catch (error) {
+    console.error(error);
+  }
+};
 
-              <td className="p-2">
-                {reserva.codigo}
-              </td>
+  useEffect(() => {
+    fetchReservas();
+  }, [filtro]);
 
-              <td className="p-2">
-                {reserva.placa}
-              </td>
-
-              <td className="p-2">
-                {reserva.tipoVehiculo}
-              </td>
-
-              <td className="p-2">
-                  {new Date(reserva.horaInicio).toLocaleDateString()}
-              </td>
-
-              <td className="p-2">
-                  {new Date(reserva.horaInicio).toLocaleTimeString()}
-              </td>
-
-              <td className="p-2">
-                {renderEstado(reserva.estado)}
-              </td>
-
-            </tr>
-
-          ))}
-
-        </tbody>
-
-      </table>
-    );
+  const handleConfirmar = async (id) => {
+    await confirmarLlegada(id);
+    fetchReservas();
   };
 
+  const handleSalida = async (codigo) => {
+    await registrarSalida(codigo);
+    fetchReservas();
+  };
+
+  const handleCancelar = async (id) => {
+    await cancelarReserva(id);
+    fetchReservas();
+  };
 
   return (
 
-    <div className="space-y-6">
-      <Card>
+    <Card>
 
-        <CardHeader>
-          <CardTitle>
-            Reservas Activas
-          </CardTitle>
-        </CardHeader>
+      <CardHeader className="flex flex-row justify-between">
 
-        <CardContent>
-          {renderTabla(activas)}
-        </CardContent>
+        <CardTitle>
+          Lista de Reservas
+        </CardTitle>
 
-      </Card>
+        <div className="space-x-2">
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Reservas Pendientes
-          </CardTitle>
-        </CardHeader>
+          <Button
+            size="sm"
+            onClick={() => setFiltro("pendientes")}
+          >
+            Pendientes
+          </Button>
 
-        <CardContent>
-          {renderTabla(pendientes)}
-        </CardContent>
+          <Button
+            size="sm"
+            onClick={() => setFiltro("activas")}
+          >
+            Activas
+          </Button>
 
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>
+          <Button
+            size="sm"
+            onClick={() => setFiltro("historial")}
+          >
             Historial
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {renderTabla(historial)}
-        </CardContent>
-      </Card>
-    </div>
+          </Button>
+
+        </div>
+
+      </CardHeader>
+
+      <CardContent>
+
+        <Table>
+
+          <TableHeader>
+
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Placa</TableHead>
+              <TableHead>Espacio</TableHead>
+              <TableHead>Hora</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableRow>
+
+          </TableHeader>
+
+          <TableBody>
+
+            {reservas.map((reserva) => (
+
+              <TableRow key={reserva.id}>
+
+                <TableCell>
+                  {reserva.id}
+                </TableCell>
+
+                <TableCell>
+                  {reserva.clienteNombreCompleto}
+                </TableCell>
+
+                <TableCell>
+                  {reserva.placa}
+                </TableCell>
+
+                <TableCell>
+                  {reserva.espacioId}
+                </TableCell>
+
+                <TableCell>
+                  {reserva.horaInicio} - {reserva.horaFin}
+                </TableCell>
+
+                <TableCell>
+                  {reserva.estado}
+                </TableCell>
+
+                <TableCell className="space-x-2">
+
+                  {filtro === "pendientes" && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleConfirmar(reserva.id)}
+                    >
+                      Confirmar
+                    </Button>
+                  )}
+
+                  {filtro === "activas" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSalida(reserva.codigoReserva)}
+                    >
+                      Salida
+                    </Button>
+                  )}
+
+                  {filtro === "pendientes" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleCancelar(reserva.id)}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
+
+                </TableCell>
+
+              </TableRow>
+
+            ))}
+
+          </TableBody>
+
+        </Table>
+
+      </CardContent>
+
+    </Card>
+
   );
+
 }

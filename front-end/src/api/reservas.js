@@ -15,9 +15,9 @@ export const buscarReservaPorCodigo = async (codigo) => {
   return data;
 };
 
-export const confirmarLlegada = async (codigo) => {
-  const { data } = await client.post(`/reservas/${codigo}/confirmar`);
-  return data;
+export const confirmarLlegada = async (id) => {
+  const response = await client.patch(`/reservas/${id}/confirmar-llegada`);
+  return response.data;
 };
 
 export const registrarSalida = async (codigo) => {

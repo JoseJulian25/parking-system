@@ -1,162 +1,90 @@
 import { useState } from "react";
 
-import {
-  buscarReservaPorCodigo,
-  confirmarLlegada
-} from "../../api/reservas";
+import { confirmarLlegada } from "../../api/reservas";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Badge } from "../ui/badge";
 
-export default function ConfirmarLlegada({ onSuccess }) {
+export default function ConfirmarLlegada() {
 
   const [codigo, setCodigo] = useState("");
-  const [reserva, setReserva] = useState(null);
-
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const handleBuscar = async () => {
-
-    setError("");
-    setSuccess("");
-    setReserva(null);
-
-    if (!codigo) {
-      setError("Ingrese código de reserva");
-      return;
-    }
-
-    try {
-
-      setLoading(true);
-
-      const data = await buscarReservaPorCodigo(codigo);
-
-      setReserva(data);
-
-    } catch (err) {
-      console.error(err);
-      setError("Reserva no encontrada");
-    } finally {
-      setLoading(false);
-    }
-
-  };
-
+  const [error, setError] = useState("");
 
   const handleConfirmar = async () => {
-
     try {
 
       setLoading(true);
+      setError("");
+      setSuccess("");
 
       await confirmarLlegada(codigo);
 
       setSuccess("Llegada confirmada correctamente");
-      setReserva(null);
       setCodigo("");
 
-      if (onSuccess) {
-        onSuccess();
-      }
-
     } catch (err) {
+
       console.error(err);
-      setError("Error confirmando llegada");
+
+      setError(
+        err?.response?.data?.message ||
+        "Error confirmando llegada"
+      );
+
     } finally {
       setLoading(false);
     }
-
   };
-
-
 
   return (
 
-    <div className="bg-white p-6 rounded-lg shadow">
+    <Card>
 
-      <h2 className="text-lg font-semibold mb-4">
-        Confirmar Llegada
-      </h2>
+      <CardHeader>
+        <CardTitle>
+          Confirmar Llegada
+        </CardTitle>
+      </CardHeader>
 
-
-      <div className="flex gap-2 mb-4">
+      <CardContent className="space-y-4">
 
         <Input
-          placeholder="Código Reserva"
+          placeholder="Ej: RES-00001"
           value={codigo}
           onChange={(e) => setCodigo(e.target.value)}
         />
 
         <Button
-          onClick={handleBuscar}
+          onClick={handleConfirmar}
           disabled={loading}
+          className="w-full"
         >
-          Buscar
+          Confirmar Llegada
         </Button>
 
-      </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
 
+        {success && (
+          <Alert>
+            <AlertDescription>
+              {success}
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
+      </CardContent>
 
-
-      {success && (
-        <Alert>
-          <AlertDescription>
-            {success}
-          </AlertDescription>
-        </Alert>
-      )}
-
-
-      {reserva && (
-
-        <div className="border rounded-lg p-4 space-y-3">
-
-          <div>
-            <strong>Placa:</strong> {reserva.placa}
-          </div>
-
-          <div>
-            <strong>Tipo:</strong> 
-            <Badge className="ml-2">
-              {reserva.tipoVehiculo}
-            </Badge>
-          </div>
-
-          <div>
-            <strong>Fecha:</strong> {new Date(reserva.horaInicio).toLocaleDateString()}
-          </div>
-
-          <div>
-                <strong>Hora:</strong> {new Date(reserva.horaInicio).toLocaleTimeString()}
-              </div>
-
-          <Button
-            className="w-full"
-            onClick={handleConfirmar}
-            disabled={loading}
-          >
-            Confirmar Llegada
-          </Button>
-
-        </div>
-
-      )}
-
-    </div>
+    </Card>
 
   );
-
 }

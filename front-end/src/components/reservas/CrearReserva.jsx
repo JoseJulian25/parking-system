@@ -20,6 +20,7 @@ export default function CrearReserva({ onSuccess }) {
 
   const [espacioId, setEspacioId] = useState("");
   const [espacios, setEspacios] = useState([]);
+  const [reservaCreada, setReservaCreada] = useState(null);
 
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
@@ -56,15 +57,31 @@ const handleSubmit = async (e) => {
     setError("");
     setSuccess("");
 
+    const numero = Date.now().toString().slice(-5);
+    const codigoReserva = `RES-${numero}`;
+
     const fechaHoraInicio = `${fechaReserva}T${horaInicio}:00`;
     const fechaHoraFin = `${fechaReserva}T${horaFin}:00`;
 
+    const espacioSeleccionado = espacios.find(
+      (e) => e.id === Number(espacioId)
+    );
+
+    if (!espacioSeleccionado) {
+      throw new Error("Debe seleccionar un espacio válido");
+    }
+
     const data = {
-      espacioId: Number(espacioId),
+      codigoReserva,
+      espacioId: espacioSeleccionado.id,
       placa,
       tipoVehiculo,
+      fechaReserva,
       horaInicio: fechaHoraInicio,
       horaFin: fechaHoraFin,
+
+      tipoDocumento,
+      clienteDocumento: documento,
       clienteNombreCompleto: `${nombre} ${apellido}`,
       clienteTelefono: telefono,
       clienteEmail: email
@@ -74,9 +91,21 @@ const handleSubmit = async (e) => {
 
     await crearReserva(data);
 
+    setReservaCreada({
+      codigoReserva,
+      nombre: `${nombre} ${apellido}`,
+      email,
+      telefono,
+      placa,
+      tipoVehiculo,
+      fechaReserva,
+      horaInicio,
+      horaFin,
+      espacio: espacioSeleccionado.codigoEspacio
+    });
+
     setSuccess("Reserva creada correctamente");
 
-    // Limpiar formulario
     setPlaca("");
     setFechaReserva("");
     setHoraInicio("");
@@ -95,10 +124,14 @@ const handleSubmit = async (e) => {
     }
 
   } catch (err) {
-    console.error("Error creando reserva:", err?.response?.data || err);
+    console.error(
+      "Error creando reserva:",
+      err?.response?.data || err
+    );
 
     setError(
       err?.response?.data?.message ||
+      err.message ||
       "Error creando reserva"
     );
 
@@ -115,8 +148,58 @@ const motosDisponibles = espacios.filter(
 ).length;
 
   return (
+    
 
     <div className="space-y-6">
+      {reservaCreada && (
+        <Card className="border-green-500 bg-green-50">
+          <CardHeader>
+          <CardTitle className="text-green-700">
+          Reserva Creada
+          </CardTitle>
+          </CardHeader>
+
+            <CardContent className="space-y-2 text-sm">
+
+              <div>
+                <strong>ID Reserva:</strong> {reservaCreada.codigoReserva}
+              </div>
+
+              <div>
+                <strong>Cliente:</strong> {reservaCreada.nombre}
+              </div>
+
+              <div>
+                <strong>Email:</strong> {reservaCreada.email}
+              </div>
+
+              <div>
+                <strong>Teléfono:</strong> {reservaCreada.telefono}
+              </div>
+
+              <div>
+                <strong>Vehículo:</strong> {reservaCreada.tipoVehiculo}
+              </div>
+
+              <div>
+                <strong>Placa:</strong> {reservaCreada.placa}
+              </div>
+
+              <div>
+                <strong>Espacio:</strong> {reservaCreada.espacio}
+              </div>
+
+              <div>
+                <strong>Fecha:</strong> {reservaCreada.fechaReserva}
+              </div>
+
+              <div>
+                <strong>Hora:</strong> {reservaCreada.horaInicio} - {reservaCreada.horaFin}
+              </div>
+
+            </CardContent>
+        </Card>
+        )}
 
       <div className="grid grid-cols-2 gap-4">
 
