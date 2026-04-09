@@ -1,6 +1,8 @@
 import { useState } from "react";
 
-import { confirmarLlegada } from "../../api/reservas";
+import {
+  confirmarLlegada
+} from "../../api/reservas";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -9,7 +11,7 @@ import { Alert, AlertDescription } from "../ui/alert";
 
 export default function ConfirmarLlegada() {
 
-  const [codigo, setCodigo] = useState("");
+  const [id, setId] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -21,10 +23,10 @@ export default function ConfirmarLlegada() {
       setError("");
       setSuccess("");
 
-      await confirmarLlegada(codigo);
+      await confirmarLlegada(id);
 
       setSuccess("Llegada confirmada correctamente");
-      setCodigo("");
+      setId("");
 
     } catch (err) {
 
@@ -53,9 +55,9 @@ export default function ConfirmarLlegada() {
       <CardContent className="space-y-4">
 
         <Input
-          placeholder="Ej: RES-00001"
-          value={codigo}
-          onChange={(e) => setCodigo(e.target.value)}
+          placeholder="ID de la reserva"
+          value={id}
+          onChange={(e) => setId(e.target.value)}
         />
 
         <Button
