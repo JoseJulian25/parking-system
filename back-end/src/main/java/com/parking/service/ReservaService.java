@@ -28,12 +28,13 @@ import com.parking.repository.UsuarioRepository;
 @Service
 public class ReservaService {
 
-    private static final String ESTADO_RESERVA = "RESERVADA";
     private static final String ESTADO_PENDIENTE = "PENDIENTE";
+    private static final String ESTADO_ACTIVA = "ACTIVA";
+    private static final String ESTADO_FINALIZADA = "FINALIZADA";
     private static final String ESTADO_CANCELADA = "CANCELADA";
-    private static final String ESTADO_EXPIRADA = "EXPIRADA";
     private static final String ESTADO_ESPACIO_LIBRE = "LIBRE";
     private static final String ESTADO_ESPACIO_RESERVADO = "RESERVADO";
+    private static final String ESTADO_ESPACIO_OCUPADO = "OCUPADO";
 
     private final ReservaRepository reservaRepository;
     private final EstadoReservaRepository estadoReservaRepository;
@@ -65,14 +66,15 @@ public class ReservaService {
     }
 
     @Transactional(readOnly = true)
-    public ReservaResponseDTO obtenerReservaPorId(Long id) {
-        Reserva reserva = reservaRepository.findById(id)
+    public ReservaResponseDTO obtenerReservaPorCodigo(String codigoReserva) {
+        Reserva reserva = reservaRepository.findByCodigoReserva(normalize(codigoReserva))
                 .orElseThrow(() -> new NoSuchElementException("Reserva no encontrada"));
         return toDto(reserva);
     }
 
     @Transactional
     public ReservaResponseDTO crearReserva(ReservaCreateDTO dto) {
+
         if (!dto.getHoraFin().isAfter(dto.getHoraInicio())) {
             throw new IllegalArgumentException("La hora de fin debe ser mayor que la hora de inicio");
         }
@@ -92,8 +94,8 @@ public class ReservaService {
             throw new IllegalStateException("Solo se puede reservar un espacio en estado LIBRE");
         }
 
-        EstadoReserva estadoReserva = estadoReservaRepository.findByNombreIgnoreCase(ESTADO_RESERVA)
-                .orElseThrow(() -> new NoSuchElementException("Estado de reserva RESERVADA no encontrado"));
+        EstadoReserva estadoReserva = estadoReservaRepository.findByNombreIgnoreCase(ESTADO_PENDIENTE)
+            .orElseThrow(() -> new NoSuchElementException("Estado de reserva PENDIENTE no encontrado"));
 
         EstadoEspacio estadoEspacioReservado = estadoEspacioRepository.findByNombreIgnoreCase(ESTADO_ESPACIO_RESERVADO)
                 .orElseThrow(() -> new NoSuchElementException("Estado de espacio RESERVADO no encontrado"));
@@ -120,11 +122,16 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO cambiarEstado(Long id, ReservaEstadoDTO dto) {
-        Reserva reserva = reservaRepository.findById(id)
+    public ReservaResponseDTO cambiarEstado(String codigoReserva, ReservaEstadoDTO dto) {
+        Reserva reserva = reservaRepository.findByCodigoReserva(normalize(codigoReserva))
                 .orElseThrow(() -> new NoSuchElementException("Reserva no encontrada"));
 
-        EstadoReserva nuevoEstado = estadoReservaRepository.findByNombreIgnoreCase(normalize(dto.getEstado()))
+        String estadoActual = normalize(reserva.getEstado().getNombre()).toUpperCase(Locale.ROOT);
+        String estadoNuevo = normalize(dto.getEstado()).toUpperCase(Locale.ROOT);
+
+        validarCambioEstado(estadoActual, estadoNuevo);
+
+        EstadoReserva nuevoEstado = estadoReservaRepository.findByNombreIgnoreCase(estadoNuevo)
                 .orElseThrow(() -> new NoSuchElementException("Estado de reserva no encontrado"));
 
         reserva.setEstado(nuevoEstado);
@@ -138,20 +145,52 @@ public class ReservaService {
     private void sincronizarEstadoEspacioPorReserva(Reserva reserva) {
         String estadoReserva = normalize(reserva.getEstado().getNombre()).toUpperCase(Locale.ROOT);
 
-        if (ESTADO_CANCELADA.equals(estadoReserva) || ESTADO_EXPIRADA.equals(estadoReserva)) {
-            EstadoEspacio libre = estadoEspacioRepository.findByNombreIgnoreCase(ESTADO_ESPACIO_LIBRE)
-                    .orElseThrow(() -> new NoSuchElementException("Estado de espacio LIBRE no encontrado"));
-            reserva.getEspacio().setEstado(libre);
-            espacioRepository.save(reserva.getEspacio());
+        if (ESTADO_CANCELADA.equals(estadoReserva) || ESTADO_FINALIZADA.equals(estadoReserva)) {
+            actualizarEstadoEspacio(reserva, ESTADO_ESPACIO_LIBRE);
             return;
         }
 
-        if (ESTADO_RESERVA.equals(estadoReserva) || ESTADO_PENDIENTE.equals(estadoReserva)) {
-            EstadoEspacio reservado = estadoEspacioRepository.findByNombreIgnoreCase(ESTADO_ESPACIO_RESERVADO)
-                    .orElseThrow(() -> new NoSuchElementException("Estado de espacio RESERVADO no encontrado"));
-            reserva.getEspacio().setEstado(reservado);
-            espacioRepository.save(reserva.getEspacio());
+        if (ESTADO_PENDIENTE.equals(estadoReserva)) {
+            actualizarEstadoEspacio(reserva, ESTADO_ESPACIO_RESERVADO);
+            return;
         }
+
+        if (ESTADO_ACTIVA.equals(estadoReserva)) {
+            actualizarEstadoEspacio(reserva, ESTADO_ESPACIO_OCUPADO);
+        }
+    }
+
+    private void actualizarEstadoEspacio(Reserva reserva, String estadoObjetivo) {
+        EstadoEspacio estadoEspacio = estadoEspacioRepository.findByNombreIgnoreCase(estadoObjetivo)
+                .orElseThrow(() -> new NoSuchElementException("Estado de espacio " + estadoObjetivo + " no encontrado"));
+        reserva.getEspacio().setEstado(estadoEspacio);
+        espacioRepository.save(reserva.getEspacio());
+    }
+
+    private void validarCambioEstado(String estadoActual, String estadoNuevo) {
+        if (estadoActual.equals(estadoNuevo)) {
+            return;
+        }
+
+        if (ESTADO_CANCELADA.equals(estadoActual) || ESTADO_FINALIZADA.equals(estadoActual)) {
+            throw new IllegalStateException("No se puede cambiar una reserva que ya esta cerrada");
+        }
+
+        if (ESTADO_PENDIENTE.equals(estadoActual)) {
+            if (ESTADO_ACTIVA.equals(estadoNuevo) || ESTADO_CANCELADA.equals(estadoNuevo)) {
+                return;
+            }
+            throw new IllegalStateException("Una reserva PENDIENTE solo puede pasar a ACTIVA o CANCELADA");
+        }
+
+        if (ESTADO_ACTIVA.equals(estadoActual)) {
+            if (ESTADO_FINALIZADA.equals(estadoNuevo) || ESTADO_CANCELADA.equals(estadoNuevo)) {
+                return;
+            }
+            throw new IllegalStateException("Una reserva ACTIVA solo puede pasar a FINALIZADA o CANCELADA");
+        }
+
+        throw new IllegalStateException("Transicion de estado no soportada");
     }
 
     private String generarCodigoReserva() {

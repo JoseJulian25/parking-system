@@ -1,22 +1,17 @@
 import client from "./client";
 
-export const getEspaciosDisponibles = async () => {
-  const { data } = await client.get("/espacios");
-  return data;
-};
-
 export const crearReserva = async (payload) => {
   const { data } = await client.post("/reservas", payload);
   return data;
 };
 
 export const buscarReservaPorCodigo = async (codigo) => {
-  const { data } = await client.get(`/reservas/codigo/${codigo}`);
+  const { data } = await client.get(`/reservas/${codigo}`);
   return data;
 };
 
-export const confirmarLlegada = async (id) => {
-  const { data } = await client.patch(`/reservas/${id}/estado`, {
+export const confirmarLlegada = async (codigoReserva) => {
+  const { data } = await client.patch(`/reservas/${codigoReserva}/estado`, {
     estado: "ACTIVA"
   });
   return data;
@@ -24,29 +19,19 @@ export const confirmarLlegada = async (id) => {
 
 
 export const registrarSalida = async (codigo) => {
-  const { data } = await client.patch(`/reservas/codigo/${codigo}/estado`, {
+  const { data } = await client.patch(`/reservas/${codigo}/estado`, {
     estado: "FINALIZADA"
   });
   return data;
 };
 
-export const getReservasActivas = async () => {
-  const { data } = await client.get("/reservas/activas");
+export const getReservas = async () => {
+  const { data } = await client.get("/reservas");
   return data;
 };
 
-export const getReservasPendientes = async () => {
-  const { data } = await client.get("/reservas/pendientes");
-  return data;
-};
-
-export const getHistorialReservas = async () => {
-  const { data } = await client.get("/reservas/historial");
-  return data;
-};
-
-export const cancelarReserva = async (id) => {
-  const { data } = await client.patch(`/reservas/${id}/estado`, {
+export const cancelarReserva = async (codigoReserva) => {
+  const { data } = await client.patch(`/reservas/${codigoReserva}/estado`, {
     estado: "CANCELADA"
   });
   return data;

@@ -36,9 +36,9 @@ public class ReservaController {
         return ResponseEntity.ok(reservaService.listarReservas());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ReservaResponseDTO> obtenerReservaPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(reservaService.obtenerReservaPorId(id));
+    @GetMapping("/{codigoReserva}")
+    public ResponseEntity<ReservaResponseDTO> obtenerReservaPorCodigo(@PathVariable String codigoReserva) {
+        return ResponseEntity.ok(reservaService.obtenerReservaPorCodigo(codigoReserva));
     }
 
     @PostMapping
@@ -46,9 +46,9 @@ public class ReservaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.crearReserva(dto));
     }
 
-    @PatchMapping("/{id}/estado")
-    public ResponseEntity<ReservaResponseDTO> cambiarEstado(@PathVariable Long id,
+    @PatchMapping("/{codigoReserva}/estado")
+    public ResponseEntity<ReservaResponseDTO> cambiarEstado(@PathVariable String codigoReserva,
             @Valid @RequestBody ReservaEstadoDTO dto) {
-        return ResponseEntity.ok(reservaService.cambiarEstado(id, dto));
+        return ResponseEntity.ok(reservaService.cambiarEstado(codigoReserva, dto));
     }
 }

@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
 import {
-  getReservasPendientes,
-  getReservasActivas,
-  getHistorialReservas,
   confirmarLlegada,
   registrarSalida,
-  cancelarReserva
+  cancelarReserva,
+  getReservas
 } from "../../api/reservas";
 
 import {
@@ -26,39 +25,77 @@ import {
 } from "../ui/table";
 
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Badge } from "../ui/badge";
 
-export default function ListaReservas() {
+const ESTADOS_HISTORIAL = ["FINALIZADA", "CANCELADA"];
+
+const getEstadoStyle = (estado) => {
+  const estadoNormalizado = (estado || "").toUpperCase();
+
+  if (estadoNormalizado === "PENDIENTE") {
+    return "bg-amber-100 text-amber-800 border-amber-300";
+  }
+
+  if (estadoNormalizado === "ACTIVA") {
+    return "bg-blue-100 text-blue-800 border-blue-300";
+  }
+
+  if (estadoNormalizado === "FINALIZADA") {
+    return "bg-emerald-100 text-emerald-800 border-emerald-300";
+  }
+
+  if (estadoNormalizado === "CANCELADA") {
+    return "bg-rose-100 text-rose-800 border-rose-300";
+  }
+
+  return "bg-slate-100 text-slate-700 border-slate-300";
+};
+
+const formatDateTime = (value) => {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("es-DO", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(date);
+};
+
+const getErrorMessage = (error, fallback) => {
+  return (
+    error?.response?.data?.message ||
+    error?.message ||
+    fallback
+  );
+};
+
+export default function ListaReservas({ refresh }) {
 
   const [reservas, setReservas] = useState([]);
   const [filtro, setFiltro] = useState("pendientes");
+  const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(false);
+  const [procesandoCodigo, setProcesandoCodigo] = useState("");
 
   const fetchReservas = async () => {
     try {
 
       setLoading(true);
 
-      let data = [];
-
-      if (filtro === "pendientes") {
-        data = await getReservasPendientes();
-      }
-
-      if (filtro === "activas") {
-        data = await getReservasActivas();
-      }
-
-      if (filtro === "historial") {
-        data = await getHistorialReservas();
-      }
-
-      console.log("Reservas:", data);
-
+      const data = await getReservas();
       setReservas(Array.isArray(data) ? data : []);
 
     } catch (error) {
       console.error("Error cargando reservas:", error);
       setReservas([]);
+      toast.error(getErrorMessage(error, "Error cargando reservas"));
     } finally {
       setLoading(false);
     }
@@ -66,84 +103,164 @@ export default function ListaReservas() {
 
   useEffect(() => {
     fetchReservas();
-  }, [filtro]);
+  }, [refresh]);
 
-  const handleConfirmar = async (id) => {
+  const handleConfirmar = async (codigoReserva) => {
     try {
-      await confirmarLlegada(id);
-      fetchReservas();
+      setProcesandoCodigo(codigoReserva);
+      await confirmarLlegada(codigoReserva);
+      toast.success("Reserva marcada como ACTIVA");
+      await fetchReservas();
     } catch (error) {
       console.error(error);
+      toast.error(getErrorMessage(error, "Error confirmando llegada"));
+    } finally {
+      setProcesandoCodigo("");
     }
   };
 
   const handleSalida = async (codigo) => {
     try {
+      setProcesandoCodigo(codigo);
       await registrarSalida(codigo);
-      fetchReservas();
+      toast.success("Reserva finalizada correctamente");
+      await fetchReservas();
     } catch (error) {
       console.error(error);
+      toast.error(getErrorMessage(error, "Error registrando salida"));
+    } finally {
+      setProcesandoCodigo("");
     }
   };
 
-  const handleCancelar = async (id) => {
+  const handleCancelar = async (codigoReserva) => {
     try {
-      await cancelarReserva(id);
-      fetchReservas();
+      setProcesandoCodigo(codigoReserva);
+      await cancelarReserva(codigoReserva);
+      toast.success("Reserva cancelada correctamente");
+      await fetchReservas();
     } catch (error) {
       console.error(error);
+      toast.error(getErrorMessage(error, "Error cancelando reserva"));
+    } finally {
+      setProcesandoCodigo("");
     }
   };
+
+  const resumen = useMemo(() => {
+    const base = {
+      pendientes: 0,
+      activas: 0,
+      historial: 0
+    };
+
+    reservas.forEach((reserva) => {
+      const estado = (reserva.estado || "").toUpperCase();
+      if (estado === "PENDIENTE") {
+        base.pendientes += 1;
+      } else if (estado === "ACTIVA") {
+        base.activas += 1;
+      } else if (ESTADOS_HISTORIAL.includes(estado)) {
+        base.historial += 1;
+      }
+    });
+
+    return base;
+  }, [reservas]);
+
+  const reservasFiltradas = reservas.filter((reserva) => {
+    const estado = (reserva.estado || "").toUpperCase();
+    const term = busqueda.trim().toLowerCase();
+
+    if (term) {
+      const texto = [
+        reserva.codigoReserva,
+        reserva.clienteNombreCompleto,
+        reserva.placa,
+        reserva.codigoEspacio
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (!texto.includes(term)) {
+        return false;
+      }
+    }
+
+    if (filtro === "pendientes") {
+      return estado === "PENDIENTE";
+    }
+
+    if (filtro === "activas") {
+      return estado === "ACTIVA";
+    }
+
+    return ESTADOS_HISTORIAL.includes(estado);
+  });
 
   return (
 
     <Card>
 
-      <CardHeader className="flex flex-row justify-between">
+      <CardHeader className="space-y-3">
 
-        <CardTitle>
+        <CardTitle className="text-base">
           Lista de Reservas
         </CardTitle>
 
-        <div className="space-x-2">
+        <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
 
-          <Button
-            size="sm"
-            onClick={() => setFiltro("pendientes")}
-          >
-            Pendientes
-          </Button>
+          <Input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por codigo, cliente, placa o espacio"
+            className="h-9"
+          />
 
-          <Button
-            size="sm"
-            onClick={() => setFiltro("activas")}
-          >
-            Activas
-          </Button>
+          <div className="flex flex-wrap gap-2">
 
-          <Button
-            size="sm"
-            onClick={() => setFiltro("historial")}
-          >
-            Historial
-          </Button>
+            <Button
+              size="sm"
+              variant={filtro === "pendientes" ? "default" : "outline"}
+              onClick={() => setFiltro("pendientes")}
+            >
+              Pendientes ({resumen.pendientes})
+            </Button>
 
+            <Button
+              size="sm"
+              variant={filtro === "activas" ? "default" : "outline"}
+              onClick={() => setFiltro("activas")}
+            >
+              Activas ({resumen.activas})
+            </Button>
+
+            <Button
+              size="sm"
+              variant={filtro === "historial" ? "default" : "outline"}
+              onClick={() => setFiltro("historial")}
+            >
+              Historial ({resumen.historial})
+            </Button>
+
+          </div>
         </div>
 
       </CardHeader>
 
       <CardContent>
 
-        <Table>
+        <Table className="text-xs md:text-sm">
 
           <TableHeader>
 
             <TableRow>
-              <TableHead>ID</TableHead>
+              <TableHead>Codigo</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Placa</TableHead>
               <TableHead>Espacio</TableHead>
-              <TableHead>Hora</TableHead>
+              <TableHead>Horario</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Acciones</TableHead>
             </TableRow>
@@ -160,20 +277,20 @@ export default function ListaReservas() {
               </TableRow>
             )}
 
-            {!loading && reservas.length === 0 && (
+            {!loading && reservasFiltradas.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7}>
-                  No hay reservas
+                  No hay reservas para este filtro
                 </TableCell>
               </TableRow>
             )}
 
-            {reservas.map((reserva) => (
+            {reservasFiltradas.map((reserva) => (
 
-              <TableRow key={reserva.id}>
+              <TableRow key={reserva.codigoReserva || reserva.id}>
 
                 <TableCell>
-                  {reserva.id}
+                  {reserva.codigoReserva}
                 </TableCell>
 
                 <TableCell>
@@ -189,21 +306,27 @@ export default function ListaReservas() {
                 </TableCell>
 
                 <TableCell>
-                  {reserva.horaInicio} - {reserva.horaFin}
+                  <div className="leading-tight">
+                    <div>{formatDateTime(reserva.horaInicio)}</div>
+                    <div className="text-muted-foreground">{formatDateTime(reserva.horaFin)}</div>
+                  </div>
                 </TableCell>
 
                 <TableCell>
-                  {reserva.estado}
+                  <Badge variant="outline" className={getEstadoStyle(reserva.estado)}>
+                    {reserva.estado}
+                  </Badge>
                 </TableCell>
 
-                <TableCell className="space-x-2">
+                <TableCell className="space-x-2 whitespace-nowrap">
 
                   {filtro === "pendientes" && (
                     <Button
                       size="sm"
-                      onClick={() => handleConfirmar(reserva.id)}
+                      disabled={procesandoCodigo === reserva.codigoReserva}
+                      onClick={() => handleConfirmar(reserva.codigoReserva)}
                     >
-                      Confirmar
+                      {procesandoCodigo === reserva.codigoReserva ? "Procesando..." : "Confirmar"}
                     </Button>
                   )}
 
@@ -211,9 +334,10 @@ export default function ListaReservas() {
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={procesandoCodigo === reserva.codigoReserva}
                       onClick={() => handleSalida(reserva.codigoReserva)}
                     >
-                      Salida
+                      {procesandoCodigo === reserva.codigoReserva ? "Procesando..." : "Registrar salida"}
                     </Button>
                   )}
 
@@ -221,9 +345,10 @@ export default function ListaReservas() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleCancelar(reserva.id)}
+                      disabled={procesandoCodigo === reserva.codigoReserva}
+                      onClick={() => handleCancelar(reserva.codigoReserva)}
                     >
-                      Cancelar
+                      {procesandoCodigo === reserva.codigoReserva ? "Procesando..." : "Cancelar"}
                     </Button>
                   )}
 

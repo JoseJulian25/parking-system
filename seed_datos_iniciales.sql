@@ -48,10 +48,10 @@ INSERT INTO estados_ticket (nombre) VALUES ('ACTIVO') ON CONFLICT (nombre) DO NO
 INSERT INTO estados_ticket (nombre) VALUES ('CERRADO') ON CONFLICT (nombre) DO NOTHING;
 
 -- Estados de reserva
-INSERT INTO estados_reserva (nombre) VALUES ('RESERVADA') ON CONFLICT (nombre) DO NOTHING;
+INSERT INTO estados_reserva (nombre) VALUES ('ACTIVA') ON CONFLICT (nombre) DO NOTHING;
 INSERT INTO estados_reserva (nombre) VALUES ('CANCELADA') ON CONFLICT (nombre) DO NOTHING;
 INSERT INTO estados_reserva (nombre) VALUES ('PENDIENTE') ON CONFLICT (nombre) DO NOTHING;
-INSERT INTO estados_reserva (nombre) VALUES ('EXPIRADA') ON CONFLICT (nombre) DO NOTHING;
+INSERT INTO estados_reserva (nombre) VALUES ('FINALIZADA') ON CONFLICT (nombre) DO NOTHING;
 
 -- Usuarios base
 INSERT INTO usuarios (username, nombre, password, rol_id, activo, eliminado, fecha_creacion, fecha_eliminacion)

@@ -3,7 +3,6 @@ package com.parking.dto;
 import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -28,7 +27,6 @@ public class ReservaCreateDTO {
     private LocalDateTime horaInicio;
 
     @NotNull(message = "La hora de fin es requerida")
-    @Future(message = "La hora de fin debe ser futura")
     private LocalDateTime horaFin;
 
     @NotBlank(message = "El nombre completo del cliente es requerido")
