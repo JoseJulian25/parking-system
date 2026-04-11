@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.parking.dto.ReservaCreateDTO;
-import com.parking.dto.ReservaEstadoDTO;
 import com.parking.dto.ReservaResponseDTO;
 import com.parking.service.ReservaService;
 
@@ -46,9 +45,13 @@ public class ReservaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.crearReserva(dto));
     }
 
-    @PatchMapping("/{codigoReserva}/estado")
-    public ResponseEntity<ReservaResponseDTO> cambiarEstado(@PathVariable String codigoReserva,
-            @Valid @RequestBody ReservaEstadoDTO dto) {
-        return ResponseEntity.ok(reservaService.cambiarEstado(codigoReserva, dto));
+    @PatchMapping("/{codigoReserva}/confirmar-llegada")
+    public ResponseEntity<ReservaResponseDTO> confirmarLlegada(@PathVariable String codigoReserva) {
+        return ResponseEntity.ok(reservaService.confirmarLlegada(codigoReserva));
+    }
+
+    @PatchMapping("/{codigoReserva}/cancelar")
+    public ResponseEntity<ReservaResponseDTO> cancelarReserva(@PathVariable String codigoReserva) {
+        return ResponseEntity.ok(reservaService.cancelarReserva(codigoReserva));
     }
 }

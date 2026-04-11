@@ -24,7 +24,6 @@ export default function CrearReserva({ onSuccess }) {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
-  const [horaFin, setHoraFin] = useState("");
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
 
@@ -67,11 +66,6 @@ export default function CrearReserva({ onSuccess }) {
       setLoading(true);
 
       const fechaHoraInicio = `${fechaReserva}T${horaInicio}:00`;
-      const fechaHoraFin = `${fechaReserva}T${horaFin}:00`;
-
-      if (fechaHoraFin <= fechaHoraInicio) {
-        throw new Error("La hora fin debe ser mayor que la hora inicio");
-      }
 
       const espacioSeleccionado = espacios.find(
         (espacio) => espacio.id === Number(espacioId)
@@ -86,7 +80,6 @@ export default function CrearReserva({ onSuccess }) {
         placa,
         tipoVehiculo,
         horaInicio: fechaHoraInicio,
-        horaFin: fechaHoraFin,
         clienteNombreCompleto: `${nombre} ${apellido}`.trim(),
         clienteTelefono: telefono,
         clienteEmail: email
@@ -102,7 +95,6 @@ export default function CrearReserva({ onSuccess }) {
         placa: reservaCreadaResponse.placa,
         tipoVehiculo: reservaCreadaResponse.tipoVehiculo,
         horaInicio: reservaCreadaResponse.horaInicio,
-        horaFin: reservaCreadaResponse.horaFin,
         espacio: reservaCreadaResponse.codigoEspacio
       });
 
@@ -111,7 +103,6 @@ export default function CrearReserva({ onSuccess }) {
       setPlaca("");
       setFechaReserva("");
       setHoraInicio("");
-      setHoraFin("");
       setNombre("");
       setApellido("");
       setEmail("");
@@ -168,7 +159,6 @@ export default function CrearReserva({ onSuccess }) {
             <div><strong>Cliente:</strong> {reservaCreada.nombre}</div>
             <div><strong>Placa:</strong> {reservaCreada.placa}</div>
             <div><strong>Inicio:</strong> {formatDateTime(reservaCreada.horaInicio)}</div>
-            <div><strong>Fin:</strong> {formatDateTime(reservaCreada.horaFin)}</div>
             <div className="md:col-span-2 flex justify-end">
               <Button
                 size="sm"
@@ -346,7 +336,7 @@ export default function CrearReserva({ onSuccess }) {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <Label>Fecha Reserva</Label>
                 <Input
@@ -364,16 +354,6 @@ export default function CrearReserva({ onSuccess }) {
                   type="time"
                   value={horaInicio}
                   onChange={(e) => setHoraInicio(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Hora Fin</Label>
-                <Input
-                  type="time"
-                  value={horaFin}
-                  onChange={(e) => setHoraFin(e.target.value)}
                   required
                 />
               </div>

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.parking.dto.ReservaCreateDTO;
-import com.parking.dto.ReservaEstadoDTO;
 import com.parking.dto.ReservaResponseDTO;
 import com.parking.entity.Espacio;
 import com.parking.entity.EstadoEspacio;
@@ -30,7 +29,6 @@ public class ReservaService {
 
     private static final String ESTADO_PENDIENTE = "PENDIENTE";
     private static final String ESTADO_ACTIVA = "ACTIVA";
-    private static final String ESTADO_FINALIZADA = "FINALIZADA";
     private static final String ESTADO_CANCELADA = "CANCELADA";
     private static final String ESTADO_ESPACIO_LIBRE = "LIBRE";
     private static final String ESTADO_ESPACIO_RESERVADO = "RESERVADO";
@@ -75,10 +73,6 @@ public class ReservaService {
     @Transactional
     public ReservaResponseDTO crearReserva(ReservaCreateDTO dto) {
 
-        if (!dto.getHoraFin().isAfter(dto.getHoraInicio())) {
-            throw new IllegalArgumentException("La hora de fin debe ser mayor que la hora de inicio");
-        }
-
         TipoVehiculo tipoVehiculo = tipoVehiculoRepository.findByNombreIgnoreCase(normalize(dto.getTipoVehiculo()))
                 .orElseThrow(() -> new NoSuchElementException("Tipo de vehiculo no encontrado"));
 
@@ -106,7 +100,6 @@ public class ReservaService {
         reserva.setTipoVehiculo(tipoVehiculo);
         reserva.setEspacio(espacio);
         reserva.setHoraInicio(dto.getHoraInicio());
-        reserva.setHoraFin(dto.getHoraFin());
         reserva.setEstado(estadoReserva);
         reserva.setClienteNombreCompleto(normalize(dto.getClienteNombreCompleto()));
         reserva.setClienteTelefono(normalize(dto.getClienteTelefono()));
@@ -122,42 +115,45 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO cambiarEstado(String codigoReserva, ReservaEstadoDTO dto) {
+    public ReservaResponseDTO confirmarLlegada(String codigoReserva) {
         Reserva reserva = reservaRepository.findByCodigoReserva(normalize(codigoReserva))
                 .orElseThrow(() -> new NoSuchElementException("Reserva no encontrada"));
 
         String estadoActual = normalize(reserva.getEstado().getNombre()).toUpperCase(Locale.ROOT);
-        String estadoNuevo = normalize(dto.getEstado()).toUpperCase(Locale.ROOT);
+        if (!ESTADO_PENDIENTE.equals(estadoActual)) {
+            throw new IllegalStateException("Solo se puede confirmar la llegada de una reserva en estado PENDIENTE");
+        }
 
-        validarCambioEstado(estadoActual, estadoNuevo);
+        EstadoReserva estadoActiva = estadoReservaRepository.findByNombreIgnoreCase(ESTADO_ACTIVA)
+                .orElseThrow(() -> new NoSuchElementException("Estado de reserva ACTIVA no encontrado"));
 
-        EstadoReserva nuevoEstado = estadoReservaRepository.findByNombreIgnoreCase(estadoNuevo)
-                .orElseThrow(() -> new NoSuchElementException("Estado de reserva no encontrado"));
-
-        reserva.setEstado(nuevoEstado);
+        reserva.setEstado(estadoActiva);
         Reserva actualizada = reservaRepository.save(reserva);
 
-        sincronizarEstadoEspacioPorReserva(actualizada);
+        actualizarEstadoEspacio(actualizada, ESTADO_ESPACIO_OCUPADO);
 
         return toDto(actualizada);
     }
 
-    private void sincronizarEstadoEspacioPorReserva(Reserva reserva) {
-        String estadoReserva = normalize(reserva.getEstado().getNombre()).toUpperCase(Locale.ROOT);
+    @Transactional
+    public ReservaResponseDTO cancelarReserva(String codigoReserva) {
+        Reserva reserva = reservaRepository.findByCodigoReserva(normalize(codigoReserva))
+                .orElseThrow(() -> new NoSuchElementException("Reserva no encontrada"));
 
-        if (ESTADO_CANCELADA.equals(estadoReserva) || ESTADO_FINALIZADA.equals(estadoReserva)) {
-            actualizarEstadoEspacio(reserva, ESTADO_ESPACIO_LIBRE);
-            return;
+        String estadoActual = normalize(reserva.getEstado().getNombre()).toUpperCase(Locale.ROOT);
+        if (!ESTADO_PENDIENTE.equals(estadoActual) && !ESTADO_ACTIVA.equals(estadoActual)) {
+            throw new IllegalStateException("Solo se puede cancelar una reserva en estado PENDIENTE o ACTIVA");
         }
 
-        if (ESTADO_PENDIENTE.equals(estadoReserva)) {
-            actualizarEstadoEspacio(reserva, ESTADO_ESPACIO_RESERVADO);
-            return;
-        }
+        EstadoReserva estadoCancelada = estadoReservaRepository.findByNombreIgnoreCase(ESTADO_CANCELADA)
+                .orElseThrow(() -> new NoSuchElementException("Estado de reserva CANCELADA no encontrado"));
 
-        if (ESTADO_ACTIVA.equals(estadoReserva)) {
-            actualizarEstadoEspacio(reserva, ESTADO_ESPACIO_OCUPADO);
-        }
+        reserva.setEstado(estadoCancelada);
+        Reserva actualizada = reservaRepository.save(reserva);
+
+        actualizarEstadoEspacio(actualizada, ESTADO_ESPACIO_LIBRE);
+
+        return toDto(actualizada);
     }
 
     private void actualizarEstadoEspacio(Reserva reserva, String estadoObjetivo) {
@@ -165,32 +161,6 @@ public class ReservaService {
                 .orElseThrow(() -> new NoSuchElementException("Estado de espacio " + estadoObjetivo + " no encontrado"));
         reserva.getEspacio().setEstado(estadoEspacio);
         espacioRepository.save(reserva.getEspacio());
-    }
-
-    private void validarCambioEstado(String estadoActual, String estadoNuevo) {
-        if (estadoActual.equals(estadoNuevo)) {
-            return;
-        }
-
-        if (ESTADO_CANCELADA.equals(estadoActual) || ESTADO_FINALIZADA.equals(estadoActual)) {
-            throw new IllegalStateException("No se puede cambiar una reserva que ya esta cerrada");
-        }
-
-        if (ESTADO_PENDIENTE.equals(estadoActual)) {
-            if (ESTADO_ACTIVA.equals(estadoNuevo) || ESTADO_CANCELADA.equals(estadoNuevo)) {
-                return;
-            }
-            throw new IllegalStateException("Una reserva PENDIENTE solo puede pasar a ACTIVA o CANCELADA");
-        }
-
-        if (ESTADO_ACTIVA.equals(estadoActual)) {
-            if (ESTADO_FINALIZADA.equals(estadoNuevo) || ESTADO_CANCELADA.equals(estadoNuevo)) {
-                return;
-            }
-            throw new IllegalStateException("Una reserva ACTIVA solo puede pasar a FINALIZADA o CANCELADA");
-        }
-
-        throw new IllegalStateException("Transicion de estado no soportada");
     }
 
     private String generarCodigoReserva() {

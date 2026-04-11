@@ -3,7 +3,6 @@ import toast from "react-hot-toast";
 
 import {
   confirmarLlegada,
-  registrarSalida,
   cancelarReserva,
   getReservas
 } from "../../api/reservas";
@@ -114,20 +113,6 @@ export default function ListaReservas({ refresh }) {
     } catch (error) {
       console.error(error);
       toast.error(getErrorMessage(error, "Error confirmando llegada"));
-    } finally {
-      setProcesandoCodigo("");
-    }
-  };
-
-  const handleSalida = async (codigo) => {
-    try {
-      setProcesandoCodigo(codigo);
-      await registrarSalida(codigo);
-      toast.success("Reserva finalizada correctamente");
-      await fetchReservas();
-    } catch (error) {
-      console.error(error);
-      toast.error(getErrorMessage(error, "Error registrando salida"));
     } finally {
       setProcesandoCodigo("");
     }
@@ -330,18 +315,7 @@ export default function ListaReservas({ refresh }) {
                     </Button>
                   )}
 
-                  {filtro === "activas" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={procesandoCodigo === reserva.codigoReserva}
-                      onClick={() => handleSalida(reserva.codigoReserva)}
-                    >
-                      {procesandoCodigo === reserva.codigoReserva ? "Procesando..." : "Registrar salida"}
-                    </Button>
-                  )}
-
-                  {filtro === "pendientes" && (
+                  {(filtro === "pendientes" || filtro === "activas") && (
                     <Button
                       size="sm"
                       variant="destructive"

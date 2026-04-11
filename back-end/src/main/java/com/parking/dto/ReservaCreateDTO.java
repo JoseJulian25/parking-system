@@ -26,9 +26,6 @@ public class ReservaCreateDTO {
     @NotNull(message = "La hora de inicio es requerida")
     private LocalDateTime horaInicio;
 
-    @NotNull(message = "La hora de fin es requerida")
-    private LocalDateTime horaFin;
-
     @NotBlank(message = "El nombre completo del cliente es requerido")
     @Size(max = 120, message = "El nombre completo no puede exceder 120 caracteres")
     private String clienteNombreCompleto;

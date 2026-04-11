@@ -11,17 +11,7 @@ export const buscarReservaPorCodigo = async (codigo) => {
 };
 
 export const confirmarLlegada = async (codigoReserva) => {
-  const { data } = await client.patch(`/reservas/${codigoReserva}/estado`, {
-    estado: "ACTIVA"
-  });
-  return data;
-};
-
-
-export const registrarSalida = async (codigo) => {
-  const { data } = await client.patch(`/reservas/${codigo}/estado`, {
-    estado: "FINALIZADA"
-  });
+  const { data } = await client.patch(`/reservas/${codigoReserva}/confirmar-llegada`);
   return data;
 };
 
@@ -31,8 +21,6 @@ export const getReservas = async () => {
 };
 
 export const cancelarReserva = async (codigoReserva) => {
-  const { data } = await client.patch(`/reservas/${codigoReserva}/estado`, {
-    estado: "CANCELADA"
-  });
+  const { data } = await client.patch(`/reservas/${codigoReserva}/cancelar`);
   return data;
 };

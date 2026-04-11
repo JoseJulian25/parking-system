@@ -70,7 +70,7 @@ public class Reserva {
     @Column(name = "hora_inicio", nullable = false)
     private LocalDateTime horaInicio;
     
-    @Column(name = "hora_fin", nullable = false)
+    @Column(name = "hora_fin")
     private LocalDateTime horaFin;
     
     @ManyToOne(fetch = FetchType.EAGER)
