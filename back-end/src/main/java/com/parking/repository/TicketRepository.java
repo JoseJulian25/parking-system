@@ -11,4 +11,6 @@ import com.parking.entity.Ticket;
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Optional<Ticket> findTopByEspacioIdAndEstadoNombreIgnoreCaseOrderByHoraEntradaDesc(Long espacioId, String estadoNombre);
+
+    Optional<Ticket> findTopByPlacaAndEstadoNombreIgnoreCaseOrderByHoraEntradaDesc(String placa, String estadoNombre);
 }

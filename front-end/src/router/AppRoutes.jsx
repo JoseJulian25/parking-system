@@ -23,8 +23,10 @@ export const AppRoutes = () => {
         <Route path="/espacios" element={<Navigate to="/entrada" replace />} />
         <Route path="/reservas" element={<ReservasPage />} />
         <Route path="/historial" element={<HistorialPage />} />
-        <Route path="/configuracion" element={<ConfiguracionPage />} />
-        <Route path="/tarifas" element={<Navigate to="/configuracion" replace />} />
+        <Route path="/configuracion" element={<Navigate to="/configuracion/empresa" replace />} />
+        <Route path="/configuracion/empresa" element={<ConfiguracionPage initialTab="general" />} />
+        <Route path="/configuracion/tarifas" element={<ConfiguracionPage initialTab="tarifas" />} />
+        <Route path="/tarifas" element={<Navigate to="/configuracion/tarifas" replace />} />
         <Route path="/usuarios" element={<UsuariosPage />} />
       </Route>
     </Route>

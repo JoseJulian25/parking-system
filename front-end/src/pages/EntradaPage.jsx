@@ -1,11 +1,12 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, Bike, Car, CreditCard, RefreshCw, Ticket } from "lucide-react";
+import { Banknote, Bike, Car, CheckCircle2, CreditCard, Info, RefreshCw, Ticket } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { registrarEntradaVehiculo } from "../api/entradas";
 import { getEspacios } from "../api/espacios";
 import { getResumenSalidaPorEspacio, procesarCobroSalida } from "../api/salidas";
+import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -152,6 +153,7 @@ export const EntradaPage = () => {
       resetCobroState();
       const resumen = await getResumenSalidaPorEspacio(espacio.id);
       setSalidaResumen(resumen);
+      setOpenDetalleDialog(false);
       setOpenCobroDialog(true);
     } catch (error) {
       console.error("Error cargando resumen de cobro:", error);
@@ -248,17 +250,39 @@ export const EntradaPage = () => {
     return (
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
         {lista.map((space) => (
-          <button
+          <div
             key={space.id}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => {
               if ((space.estado || "").toUpperCase() === "LIBRE" && space.tipoVehiculo === tipoVehiculo) {
                 setEspacioSeleccionadoId(space.id);
               }
             }}
             onDoubleClick={() => handleOpenDetalle(space)}
-            className={`text-left rounded-lg transition-all ${espacioSeleccionadoId === space.id ? "ring-2 ring-primary ring-offset-2" : ""}`}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                if ((space.estado || "").toUpperCase() === "LIBRE" && space.tipoVehiculo === tipoVehiculo) {
+                  setEspacioSeleccionadoId(space.id);
+                }
+              }
+            }}
+            className={`relative text-left rounded-lg transition-all cursor-pointer ${espacioSeleccionadoId === space.id ? "ring-2 ring-primary ring-offset-2" : ""}`}
           >
+            <button
+              type="button"
+              className="absolute right-1 top-1 z-10 rounded-md bg-transparent p-1 text-muted-foreground/80 transition-colors hover:bg-white/80 hover:text-foreground"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleOpenDetalle(space);
+              }}
+              aria-label="Ver detalle del espacio"
+              title="Ver detalle"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+
             <EspacioCard
               numero={space.numero || space.codigoEspacio}
               estado={space.estado}
@@ -266,7 +290,7 @@ export const EntradaPage = () => {
               ticketActivo={space.ticketActivo}
               showActions={false}
             />
-          </button>
+          </div>
         ))}
       </div>
     );
@@ -277,9 +301,6 @@ export const EntradaPage = () => {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Panel de Entradas</h1>
-          <p className="text-sm text-muted-foreground">
-            Visualiza espacios en tiempo real y registra entradas, salidas y cobros desde un panel unico y operativo.
-          </p>
         </div>
 
         <Button
@@ -305,12 +326,30 @@ export const EntradaPage = () => {
               }}
               className="space-y-4"
             >
-              <TabsList className="grid w-full grid-cols-2 border bg-white p-1">
-                <TabsTrigger value="carros">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50">
+                  Libres: {stats.libre}
+                </Badge>
+                <Badge variant="outline" className="border-rose-300 text-rose-700 bg-rose-50">
+                  Ocupados: {stats.ocupado}
+                </Badge>
+                <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
+                  Reservados: {stats.reservado}
+                </Badge>
+              </div>
+
+              <TabsList className="grid w-full grid-cols-2 border border-primary/30 bg-primary/10 p-1">
+                <TabsTrigger
+                  value="carros"
+                  className="text-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
                   <Car className="mr-2 h-4 w-4" />
                   Carros ({espaciosCarros.length})
                 </TabsTrigger>
-                <TabsTrigger value="motos">
+                <TabsTrigger
+                  value="motos"
+                  className="text-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
                   <Bike className="mr-2 h-4 w-4" />
                   Motos ({espaciosMotos.length})
                 </TabsTrigger>
@@ -369,24 +408,6 @@ export const EntradaPage = () => {
               </div>
             )}
 
-            <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Libres</p>
-              <p className="text-2xl font-bold text-emerald-700">{stats.libre}</p>
-            </div>
-
-            <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ocupados</p>
-              <p className="text-2xl font-bold text-rose-700">{stats.ocupado}</p>
-            </div>
-
-            <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reservados</p>
-              <p className="text-2xl font-bold text-amber-700">{stats.reservado}</p>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Nota: Doble click en un espacio para ver detalle. Si esta ocupado, puedes procesar salida y cobro.
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -433,12 +454,14 @@ export const EntradaPage = () => {
 
       <Dialog open={openCobroDialog} onOpenChange={handleCloseCobroDialog}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Salida y Cobro</DialogTitle>
-            <DialogDescription>
-              Complete el pago para registrar la salida y liberar el espacio.
-            </DialogDescription>
-          </DialogHeader>
+          {!cobroProcesado && (
+            <DialogHeader>
+              <DialogTitle>Salida y Cobro</DialogTitle>
+              <DialogDescription>
+                Complete el pago para registrar la salida y liberar el espacio.
+              </DialogDescription>
+            </DialogHeader>
+          )}
 
           {salidaResumen && !cobroProcesado && (
             <div className="space-y-4 text-sm">
@@ -502,16 +525,15 @@ export const EntradaPage = () => {
           )}
 
           {cobroProcesado && (
-            <div className="space-y-3 text-sm">
-              <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 space-y-1">
-                <p className="font-semibold text-emerald-800">Salida procesada</p>
-                <div><strong>Ticket:</strong> {cobroProcesado.codigoTicket}</div>
-                <div><strong>Placa:</strong> {cobroProcesado.placa}</div>
-                <div><strong>Total cobrado:</strong> {formatCurrency(cobroProcesado.montoTotal)}</div>
-                <div><strong>Monto recibido:</strong> {formatCurrency(cobroProcesado.montoRecibido)}</div>
-                {Number(cobroProcesado.cambio || 0) > 0 && (
-                  <div><strong>Cambio:</strong> {formatCurrency(cobroProcesado.cambio)}</div>
-                )}
+            <div className="space-y-4 text-sm">
+              <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-5">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <CheckCircle2 className="h-16 w-16 text-emerald-600" />
+                  <p className="text-xs uppercase tracking-wide text-emerald-800/80">Cambio</p>
+                  <p className="text-3xl font-bold text-emerald-800">
+                    {formatCurrency(cobroProcesado.cambio)}
+                  </p>
+                </div>
               </div>
 
               <Button type="button" className="w-full" onClick={() => setOpenCobroDialog(false)}>

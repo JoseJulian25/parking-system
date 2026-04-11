@@ -14,4 +14,9 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     List<Reserva> findAllByOrderByFechaCreacionDesc();
 
     Optional<Reserva> findByCodigoReserva(String codigoReserva);
+
+    Optional<Reserva> findTopByEspacioIdAndEstadoNombreIgnoreCaseOrderByHoraInicioDesc(Long espacioId, String estadoNombre);
+
+    Optional<Reserva> findTopByEspacioIdAndPlacaIgnoreCaseAndEstadoNombreIgnoreCaseOrderByHoraInicioDesc(
+            Long espacioId, String placa, String estadoNombre);
 }
