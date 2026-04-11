@@ -14,4 +14,5 @@ public class EspacioResponseDTO {
     private String tipoVehiculo;
     private String estado;
     private TicketActivoDTO ticketActivo;
+    private ReservaActivaDTO reservaActiva;
 }

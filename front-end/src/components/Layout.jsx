@@ -1,7 +1,5 @@
 import {
   Calendar,
-  DoorOpen,
-  Grid3x3,
   History,
   LayoutDashboard,
   LogIn,
@@ -20,8 +18,6 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 const menuItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "operador"] },
   { path: "/entrada", label: "Entradas", icon: LogIn, roles: ["admin", "operador"] },
-  { path: "/salida", label: "Salidas y Cobro", icon: DoorOpen, roles: ["admin", "operador"] },
-  { path: "/espacios", label: "Espacios", icon: Grid3x3, roles: ["admin", "operador"] },
   { path: "/reservas", label: "Reservas", icon: Calendar, roles: ["admin", "operador"] },
   { path: "/historial", label: "Historial", icon: History, roles: ["admin", "operador"] },
   { path: "/configuracion", label: "Configuracion", icon: Settings, roles: ["admin"] },

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TicketActivoDTO {
 
+    private String codigoTicket;
     private String placa;
     private String horaEntrada;
 }

@@ -14,13 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.parking.dto.AddEspaciosLoteDTO;
 import com.parking.dto.EspacioResponseDTO;
+import com.parking.dto.ReservaActivaDTO;
 import com.parking.dto.TicketActivoDTO;
 import com.parking.entity.Espacio;
 import com.parking.entity.EstadoEspacio;
+import com.parking.entity.Reserva;
 import com.parking.entity.Ticket;
 import com.parking.entity.TipoVehiculo;
 import com.parking.repository.EspacioRepository;
 import com.parking.repository.EstadoEspacioRepository;
+import com.parking.repository.ReservaRepository;
 import com.parking.repository.TicketRepository;
 import com.parking.repository.TipoVehiculoRepository;
 
@@ -29,16 +32,21 @@ public class EspacioService {
 
     private static final String ESTADO_LIBRE = "libre";
     private static final String ESTADO_TICKET_ACTIVO = "activo";
+    private static final String ESTADO_RESERVA_PENDIENTE = "pendiente";
     private static final DateTimeFormatter HORA_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final EspacioRepository espacioRepository;
     private final TicketRepository ticketRepository;
+    private final ReservaRepository reservaRepository;
     private final TipoVehiculoRepository tipoVehiculoRepository;
     private final EstadoEspacioRepository estadoEspacioRepository;
 
-    public EspacioService(EspacioRepository espacioRepository, TicketRepository ticketRepository, TipoVehiculoRepository tipoVehiculoRepository, EstadoEspacioRepository estadoEspacioRepository) {
+    public EspacioService(EspacioRepository espacioRepository, TicketRepository ticketRepository,
+            ReservaRepository reservaRepository, TipoVehiculoRepository tipoVehiculoRepository,
+            EstadoEspacioRepository estadoEspacioRepository) {
         this.espacioRepository = espacioRepository;
         this.ticketRepository = ticketRepository;
+        this.reservaRepository = reservaRepository;
         this.tipoVehiculoRepository = tipoVehiculoRepository;
         this.estadoEspacioRepository = estadoEspacioRepository;
     }
@@ -197,8 +205,23 @@ public class EspacioService {
         TicketActivoDTO ticketActivoDTO = null;
         if (ticketActivo != null && ticketActivo.getHoraEntrada() != null) {
             ticketActivoDTO = new TicketActivoDTO(
+                    ticketActivo.getCodigoTicket(),
                     ticketActivo.getPlaca(),
                     ticketActivo.getHoraEntrada().format(HORA_FORMATTER)
+            );
+        }
+
+        ReservaActivaDTO reservaActivaDTO = null;
+        Optional<Reserva> reservaActiva = reservaRepository
+            .findTopByEspacioIdAndEstadoNombreIgnoreCaseOrderByHoraInicioDesc(espacio.getId(), ESTADO_RESERVA_PENDIENTE);
+
+        if (reservaActiva.isPresent() && reservaActiva.get().getHoraInicio() != null) {
+            Reserva reserva = reservaActiva.get();
+            reservaActivaDTO = new ReservaActivaDTO(
+                reserva.getCodigoReserva(),
+                reserva.getClienteNombreCompleto(),
+                reserva.getPlaca(),
+                reserva.getHoraInicio().format(HORA_FORMATTER)
             );
         }
 
@@ -207,7 +230,8 @@ public class EspacioService {
                 espacio.getCodigoEspacio(),
                 espacio.getTipoVehiculo().getNombre(),
                 espacio.getEstado().getNombre(),
-                ticketActivoDTO
+            ticketActivoDTO,
+            reservaActivaDTO
         );
     }
 }

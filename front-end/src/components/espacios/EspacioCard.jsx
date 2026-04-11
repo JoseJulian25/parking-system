@@ -32,10 +32,10 @@ export const EspacioCard = ({
   numero,
   estado,
   tipoVehiculo,
-  ticketActivo,
   onEdit,
   onDelete,
   canDelete = false,
+  showActions = true,
 }) => {
   const vehicleType = typeof tipoVehiculo === 'string' ? tipoVehiculo.toLowerCase() : '';
   const Icon = vehicleType === 'moto' ? Bike : Car;
@@ -43,42 +43,37 @@ export const EspacioCard = ({
 
   return (
     <div
-      className={`relative group overflow-hidden rounded-lg border p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${statusStyles.container}`}
+      className={`relative group overflow-hidden rounded-lg border px-3 py-2 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${statusStyles.container}`}
     >
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-        <button
-          onClick={onEdit}
-          className="rounded bg-slate-700/80 p-1 text-white"
-          type="button"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
-        {canDelete && (
+      {showActions && (
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
           <button
-            onClick={onDelete}
-            className="rounded bg-rose-600/90 p-1 text-white"
+            onClick={onEdit}
+            className="rounded bg-slate-700/80 p-1 text-white"
             type="button"
           >
-            <X className="w-4 h-4" />
+            <Settings className="w-4 h-4" />
           </button>
-        )}
-      </div>
+          {canDelete && (
+            <button
+              onClick={onDelete}
+              className="rounded bg-rose-600/90 p-1 text-white"
+              type="button"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="absolute bottom-2 right-2 opacity-40">
         <Icon className="w-4 h-4" aria-hidden="true" />
       </div>
 
-      <div className="text-center pl-1">
-        <p className="text-2xl font-bold mb-1">{numero}</p>
+      <div className="text-center pr-5">
+        <p className="text-lg font-bold mb-1 leading-none">{numero}</p>
 
         <Badge variant="outline" className={statusStyles.badge}>{estado}</Badge>
-
-        {ticketActivo && (
-          <div className="mt-2 border-t border-border pt-2">
-            <p className="text-xs font-medium truncate">{ticketActivo.placa}</p>
-            <p className="text-xs text-muted-foreground">{ticketActivo.horaEntrada}</p>
-          </div>
-        )}
       </div>
     </div>
   );
