@@ -1,6 +1,7 @@
 package com.parking.controller;
 
 import java.util.Map;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.springframework.core.io.ByteArrayResource;
@@ -189,9 +190,34 @@ public class ReportesController {
         return construirRespuestaCsv(fileName, data);
     }
 
+    @GetMapping("/export/pdf/resumen-operativo-diario")
+    public ResponseEntity<ByteArrayResource> exportarResumenOperativoDiarioPdf(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        String fileName = reportesService.construirNombreArchivoPdf("resumen_operativo_diario");
+        byte[] data = reportesService.exportarResumenOperativoDiarioPdf(fecha);
+        return construirRespuestaPdf(fileName, data);
+    }
+
+    @GetMapping("/export/pdf/cancelaciones")
+    public ResponseEntity<ByteArrayResource> exportarCancelacionesPdf(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        String fileName = reportesService.construirNombreArchivoPdf("cancelaciones_reservas");
+        byte[] data = reportesService.exportarCancelacionesConMotivoPdf(fechaDesde, fechaHasta);
+        return construirRespuestaPdf(fileName, data);
+    }
+
     private ResponseEntity<ByteArrayResource> construirRespuestaCsv(String fileName, byte[] data) {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentLength(data.length)
+                .body(new ByteArrayResource(data));
+    }
+
+    private ResponseEntity<ByteArrayResource> construirRespuestaPdf(String fileName, byte[] data) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .contentLength(data.length)
                 .body(new ByteArrayResource(data));

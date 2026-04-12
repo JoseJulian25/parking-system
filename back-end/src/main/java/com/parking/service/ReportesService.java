@@ -1,6 +1,7 @@
 package com.parking.service;
 
 import java.math.BigDecimal;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +22,17 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 
 import com.parking.dto.ReporteConsultaPlacaResponseDTO;
 import com.parking.dto.ReporteKpiDTO;
@@ -687,6 +699,75 @@ public class ReportesService {
         return prefijo + "_" + timestamp + ".csv";
         }
 
+            @Transactional(readOnly = true)
+            public byte[] exportarResumenOperativoDiarioPdf(LocalDate fecha) {
+            LocalDate dia = fecha == null ? LocalDate.now() : fecha;
+            RangoFechas rangoDia = new RangoFechas(dia.atStartOfDay(), dia.plusDays(1).atStartOfDay());
+
+            long entradas = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+                rangoDia.fechaDesde(),
+                rangoDia.fechaHasta()).size();
+            long salidas = ticketRepository.findAllByHoraSalidaGreaterThanEqualAndHoraSalidaLessThan(
+                rangoDia.fechaDesde(),
+                rangoDia.fechaHasta()).size();
+            long activos = ticketRepository.findAll().stream()
+                .filter(ticket -> ticket.getEstado() != null)
+                .filter(ticket -> ESTADO_TICKET_ACTIVO.equalsIgnoreCase(ticket.getEstado().getNombre()))
+                .count();
+            long reservasCreadas = obtenerReservasCreadasEnRango(rangoDia).size();
+            long cancelaciones = obtenerReservasCanceladasEnRango(rangoDia).size();
+
+            List<String> headers = List.of("Indicador", "Valor");
+            List<List<String>> rows = List.of(
+                List.of("Fecha", dia.toString()),
+                List.of("Entradas del dia", String.valueOf(entradas)),
+                List.of("Salidas del dia", String.valueOf(salidas)),
+                List.of("Flujo neto del dia", String.valueOf(entradas - salidas)),
+                List.of("Tickets activos actuales", String.valueOf(activos)),
+                List.of("Reservas creadas del dia", String.valueOf(reservasCreadas)),
+                List.of("Cancelaciones del dia", String.valueOf(cancelaciones)));
+
+            return generarPdf(
+                "Resumen operativo diario",
+                "Corte generado: " + formatDateTime(LocalDateTime.now()),
+                headers,
+                rows);
+            }
+
+            @Transactional(readOnly = true)
+            public byte[] exportarCancelacionesConMotivoPdf(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+            RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+            List<Reserva> canceladas = obtenerReservasCanceladasEnRango(rango);
+
+            List<String> headers = List.of(
+                "Codigo",
+                "Placa",
+                "Cliente",
+                "Espacio",
+                "Hora inicio",
+                "Hora cancelacion",
+                "Motivo");
+
+            List<List<String>> rows = canceladas.stream()
+                .map(reserva -> List.of(
+                    valorCsv(reserva.getCodigoReserva()),
+                    valorCsv(reserva.getPlaca()),
+                    valorCsv(reserva.getClienteNombreCompleto()),
+                    reserva.getEspacio() == null ? "-" : valorCsv(reserva.getEspacio().getCodigoEspacio()),
+                    formatDateTime(reserva.getHoraInicio()),
+                    formatDateTime(reserva.getHoraFin()),
+                    normalizarMotivo(reserva.getMotivoCancelacion())))
+                .toList();
+
+            String subtitulo = "Rango: " + formatDateTime(rango.fechaDesde()) + " a " + formatDateTime(rango.fechaHasta());
+            return generarPdf("Cancelaciones de reservas con motivo", subtitulo, headers, rows);
+            }
+
+            public String construirNombreArchivoPdf(String prefijo) {
+            String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP_FORMATTER);
+            return prefijo + "_" + timestamp + ".pdf";
+            }
+
         private ReporteSerieTemporalResponseDTO construirSeriePorHora(
             List<Ticket> tickets,
             Function<Ticket, LocalDateTime> extractor,
@@ -796,6 +877,47 @@ public class ReportesService {
 
         private String valorCsv(String value) {
             return value == null || value.isBlank() ? "-" : value.trim();
+        }
+
+        private byte[] generarPdf(String titulo, String subtitulo, List<String> headers, List<List<String>> rows) {
+            try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+                Document document = new Document();
+                PdfWriter.getInstance(document, outputStream);
+                document.open();
+
+                Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+                Font subtitleFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+                Paragraph title = new Paragraph(titulo, titleFont);
+                title.setAlignment(Element.ALIGN_LEFT);
+                document.add(title);
+
+                if (subtitulo != null && !subtitulo.isBlank()) {
+                    Paragraph subtitle = new Paragraph(subtitulo, subtitleFont);
+                    subtitle.setSpacingAfter(10f);
+                    document.add(subtitle);
+                }
+
+                PdfPTable table = new PdfPTable(headers.size());
+                table.setWidthPercentage(100f);
+
+                for (String header : headers) {
+                    PdfPCell cell = new PdfPCell(new Phrase(header));
+                    cell.setHorizontalAlignment(Element.ALIGN_LEFT);
+                    table.addCell(cell);
+                }
+
+                for (List<String> row : rows) {
+                    for (String col : row) {
+                        table.addCell(valorCsv(col));
+                    }
+                }
+
+                document.add(table);
+                document.close();
+                return outputStream.toByteArray();
+            } catch (DocumentException | IOException ex) {
+                throw new IllegalStateException("No se pudo generar el archivo PDF", ex);
+            }
         }
 
         private record RangoFechas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
