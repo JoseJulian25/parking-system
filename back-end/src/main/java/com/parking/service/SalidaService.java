@@ -140,6 +140,8 @@ public class SalidaService {
         Pago pago = new Pago();
         pago.setTicket(ticketActualizado);
         pago.setMonto(calculo.montoTotal());
+        pago.setMetodoPago(metodoPago);
+        pago.setMontoRecibido(montoRecibido.setScale(2, RoundingMode.HALF_UP));
         pago.setHoraPago(horaSalida);
         pago.setProcesadoPor(obtenerUsuarioAutenticado());
         pagoRepository.save(pago);

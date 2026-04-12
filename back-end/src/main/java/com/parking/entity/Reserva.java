@@ -72,6 +72,10 @@ public class Reserva {
     
     @Column(name = "hora_fin")
     private LocalDateTime horaFin;
+
+    @Size(max = 300)
+    @Column(name = "motivo_cancelacion", length = 300)
+    private String motivoCancelacion;
     
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "estado_id", nullable = false)

@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -37,6 +38,15 @@ public class Pago {
     @DecimalMin("0.0")
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal monto;
+
+    @NotBlank
+    @Column(name = "metodo_pago", nullable = false, length = 20)
+    private String metodoPago;
+
+    @NotNull
+    @DecimalMin("0.0")
+    @Column(name = "monto_recibido", nullable = false, precision = 10, scale = 2)
+    private BigDecimal montoRecibido;
     
     @Column(name = "hora_pago", nullable = false)
     private LocalDateTime horaPago = LocalDateTime.now();

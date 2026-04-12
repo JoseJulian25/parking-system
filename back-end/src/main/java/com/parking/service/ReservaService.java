@@ -3,6 +3,7 @@ package com.parking.service;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
+import java.time.LocalDateTime;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.parking.dto.ReservaCreateDTO;
+import com.parking.dto.ReservaCancelacionDTO;
 import com.parking.dto.ReservaResponseDTO;
 import com.parking.entity.Espacio;
 import com.parking.entity.EstadoEspacio;
@@ -136,7 +138,7 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO cancelarReserva(String codigoReserva) {
+    public ReservaResponseDTO cancelarReserva(String codigoReserva, ReservaCancelacionDTO dto) {
         Reserva reserva = reservaRepository.findByCodigoReserva(normalize(codigoReserva))
                 .orElseThrow(() -> new NoSuchElementException("Reserva no encontrada"));
 
@@ -149,6 +151,8 @@ public class ReservaService {
                 .orElseThrow(() -> new NoSuchElementException("Estado de reserva CANCELADA no encontrado"));
 
         reserva.setEstado(estadoCancelada);
+    reserva.setMotivoCancelacion(normalize(dto.getMotivoCancelacion()));
+    reserva.setHoraFin(LocalDateTime.now());
         Reserva actualizada = reservaRepository.save(reserva);
 
         actualizarEstadoEspacio(actualizada, ESTADO_ESPACIO_LIBRE);
@@ -191,6 +195,7 @@ public class ReservaService {
                 reserva.getEstado().getNombre(),
                 reserva.getHoraInicio(),
                 reserva.getHoraFin(),
+                reserva.getMotivoCancelacion(),
                 reserva.getClienteNombreCompleto(),
                 reserva.getClienteTelefono(),
                 reserva.getClienteEmail(),
