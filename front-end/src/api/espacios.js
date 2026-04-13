@@ -5,6 +5,11 @@ export const getEspacios = async () => {
   return data;
 };
 
+export const getEspaciosInactivos = async () => {
+  const { data } = await client.get("/espacios/inactivos");
+  return data;
+};
+
 export const updateEstadoEspacio = async (id, estado) => {
   try {
     const { data } = await client.patch(`/espacios/${id}/estado`, { estado });
@@ -33,6 +38,16 @@ export const deleteEspacio = async (id) => {
     return data;
   } catch (error) {
     console.log("Error deleteEspacio:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const reactivarEspacio = async (id) => {
+  try {
+    const { data } = await client.patch(`/espacios/${id}/activar`);
+    return data;
+  } catch (error) {
+    console.log("Error reactivarEspacio:", error.response?.data || error.message);
     throw error;
   }
 };
