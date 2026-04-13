@@ -11,6 +11,7 @@ import { ReportesOperativosPage } from "../pages/reportes/ReportesOperativosPage
 import { ReportesReservasPage } from "../pages/reportes/ReportesReservasPage";
 import { ReportesOcupacionPage } from "../pages/reportes/ReportesOcupacionPage";
 import { ReportesConsultasPage } from "../pages/reportes/ReportesConsultasPage";
+import { ReportesFinancierosPage } from "../pages/reportes/ReportesFinancierosPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const AppRoutes = () => {
@@ -36,6 +37,7 @@ export const AppRoutes = () => {
         <Route path="/reportes/operativos" element={<ReportesOperativosPage />} />
         <Route path="/reportes/reservas" element={<ReportesReservasPage />} />
         <Route path="/reportes/ocupacion" element={<ReportesOcupacionPage />} />
+        <Route path="/reportes/financieros" element={<ReportesFinancierosPage />} />
         <Route path="/reportes/consultas" element={<ReportesConsultasPage />} />
       </Route>
     </Route>

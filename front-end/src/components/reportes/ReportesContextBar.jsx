@@ -21,6 +21,7 @@ export const ReportesContextBar = ({
   usuarios = [],
   granularidad = "dia",
   onGranularidadChange,
+  granularidades = GRANULARIDADES,
   onLimpiar,
   onActualizar,
   loading = false,
@@ -50,7 +51,7 @@ export const ReportesContextBar = ({
             <SelectValue placeholder="Granularidad" />
           </SelectTrigger>
           <SelectContent>
-            {GRANULARIDADES.map((item) => (
+            {granularidades.map((item) => (
               <SelectItem key={item.value} value={item.value}>
                 {item.label}
               </SelectItem>

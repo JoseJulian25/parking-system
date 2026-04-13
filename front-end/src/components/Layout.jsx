@@ -35,6 +35,7 @@ const menuItems = [
       { path: "/reportes/operativos", label: "Operativos", icon: Activity },
       { path: "/reportes/reservas", label: "Reservas", icon: Calendar },
       { path: "/reportes/ocupacion", label: "Ocupacion", icon: PieChart },
+      { path: "/reportes/financieros", label: "Financieros", icon: DollarSign },
       { path: "/reportes/consultas", label: "Consultas", icon: FileSearch }
     ]
   },
