@@ -21,8 +21,6 @@ import {
 } from "../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
-const REFRESH_INTERVAL_MS = 15000;
-
 const getErrorMessage = (error, fallback) => {
   return error?.response?.data?.message || error?.message || fallback;
 };
@@ -211,12 +209,6 @@ export const EntradaPage = () => {
 
   useEffect(() => {
     fetchEspacios(true);
-
-    const interval = window.setInterval(() => {
-      fetchEspacios(false);
-    }, REFRESH_INTERVAL_MS);
-
-    return () => window.clearInterval(interval);
   }, []);
 
   const espaciosCarros = useMemo(

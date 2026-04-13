@@ -660,11 +660,7 @@ public class ReportesService {
 
         List<Ticket> tickets = ticketRepository.findAllByPlacaIgnoreCaseOrderByHoraEntradaDesc(placaNormalizada);
         List<Reserva> reservas = reservaRepository.findAllByPlacaIgnoreCaseOrderByFechaCreacionDesc(placaNormalizada);
-        List<Pago> pagos = pagoRepository.findAll().stream()
-                .filter(pago -> pago.getTicket() != null)
-                .filter(pago -> pago.getTicket().getPlaca() != null)
-                .filter(pago -> placaNormalizada.equalsIgnoreCase(pago.getTicket().getPlaca()))
-                .toList();
+        List<Pago> pagos = pagoRepository.findAllByTicket_PlacaIgnoreCase(placaNormalizada);
 
         record EventoHistorial(LocalDateTime fechaEvento, Map<String, String> fila) {
         }
@@ -754,11 +750,9 @@ public class ReportesService {
         Ticket ticket = ticketRepository.findByCodigoTicketIgnoreCase(codigoNormalizado)
                 .orElseThrow(() -> new NoSuchElementException("Ticket no encontrado"));
 
-        Pago pago = pagoRepository.findAll().stream()
-                .filter(item -> item.getTicket() != null && item.getTicket().getId() != null)
-                .filter(item -> ticket.getId() != null && ticket.getId().equals(item.getTicket().getId()))
-                .findFirst()
-                .orElse(null);
+        Pago pago = ticket.getId() == null
+            ? null
+            : pagoRepository.findFirstByTicket_Id(ticket.getId()).orElse(null);
 
         List<String> columnas = List.of("paso", "fechaEvento", "tipoEvento", "estado", "detalle", "usuario");
         List<ReporteTablaFilaDTO> filas = new java.util.ArrayList<>();
@@ -1193,7 +1187,7 @@ public class ReportesService {
         public ReporteResumenKpiResponseDTO obtenerTasaConversionReservaIngreso(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
         List<Reserva> reservasProgramadas = obtenerReservasProgramadasEnRango(rango);
-        List<Pago> pagos = pagoRepository.findAll();
+        List<Pago> pagos = obtenerPagosEnRango(rango);
 
         long convertidas = reservasProgramadas.stream()
             .filter(reserva -> existePagoAsociableAReserva(reserva, pagos))
@@ -1841,11 +1835,9 @@ public class ReportesService {
         }
 
         private List<Pago> obtenerPagosEnRango(RangoFechas rango) {
-            return pagoRepository.findAll().stream()
-                    .filter(pago -> pago.getHoraPago() != null)
-                    .filter(pago -> !pago.getHoraPago().isBefore(rango.fechaDesde())
-                            && pago.getHoraPago().isBefore(rango.fechaHasta()))
-                    .toList();
+            return pagoRepository.findAllByHoraPagoGreaterThanEqualAndHoraPagoLessThan(
+                rango.fechaDesde(),
+                rango.fechaHasta());
         }
 
         private String normalizarGranularidad(String granularidad) {

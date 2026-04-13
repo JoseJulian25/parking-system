@@ -28,8 +28,6 @@ import { getReservas } from "../api/reservas";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 
-const REFRESH_INTERVAL_MS = 30000;
-
 const getErrorMessage = (error, fallback) => {
   return error?.response?.data?.message || error?.message || fallback;
 };
@@ -77,12 +75,6 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     fetchDashboard(true);
-
-    const interval = window.setInterval(() => {
-      fetchDashboard(false);
-    }, REFRESH_INTERVAL_MS);
-
-    return () => window.clearInterval(interval);
   }, []);
 
   const metrics = useMemo(() => {
