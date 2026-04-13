@@ -8,12 +8,15 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.WeekFields;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,6 +38,10 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 
 import com.parking.dto.ReporteConsultaPlacaResponseDTO;
+import com.parking.dto.ReporteComparativoItemDTO;
+import com.parking.dto.ReporteComparativoResponseDTO;
+import com.parking.dto.ReporteFinancieroResponseDTO;
+import com.parking.dto.ReporteIndicadorFinancieroDTO;
 import com.parking.dto.ReporteKpiDTO;
 import com.parking.dto.ReporteResumenKpiResponseDTO;
 import com.parking.dto.ReporteSerieTemporalItemDTO;
@@ -42,11 +49,15 @@ import com.parking.dto.ReporteSerieTemporalResponseDTO;
 import com.parking.dto.ReporteSeccionDTO;
 import com.parking.dto.ReporteTablaFilaDTO;
 import com.parking.dto.ReporteTablaResponseDTO;
+import com.parking.dto.ReporteTopNItemDTO;
+import com.parking.dto.ReporteTopNResponseDTO;
 import com.parking.dto.ReportesBootstrapResponseDTO;
 import com.parking.entity.Espacio;
+import com.parking.entity.Pago;
 import com.parking.entity.Reserva;
 import com.parking.entity.Ticket;
 import com.parking.repository.EspacioRepository;
+import com.parking.repository.PagoRepository;
 import com.parking.repository.ReservaRepository;
 import com.parking.repository.TicketRepository;
 
@@ -58,21 +69,28 @@ public class ReportesService {
     private static final String ESTADO_RESERVA_ACTIVA = "ACTIVA";
     private static final String ESTADO_RESERVA_FINALIZADA = "FINALIZADA";
     private static final String ESTADO_RESERVA_CANCELADA = "CANCELADA";
+    private static final String MODO_COMPARACION_PERIODO_ANTERIOR = "periodoanterior";
+    private static final String MODO_COMPARACION_MISMO_PERIODO_ANIO_ANTERIOR = "mismoperiodoanioanterior";
     private static final Set<String> ESTADOS_OCUPADOS_ESPACIO = Set.of("OCUPADO", "RESERVADO");
+    private static final String MONEDA_DEFAULT = "GTQ";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter FILE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final DateTimeFormatter FILE_STANDARD_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmm");
 
     private final TicketRepository ticketRepository;
     private final ReservaRepository reservaRepository;
     private final EspacioRepository espacioRepository;
+    private final PagoRepository pagoRepository;
 
     public ReportesService(
             TicketRepository ticketRepository,
             ReservaRepository reservaRepository,
-            EspacioRepository espacioRepository) {
+            EspacioRepository espacioRepository,
+            PagoRepository pagoRepository) {
         this.ticketRepository = ticketRepository;
         this.reservaRepository = reservaRepository;
         this.espacioRepository = espacioRepository;
+        this.pagoRepository = pagoRepository;
     }
 
     @Transactional(readOnly = true)
@@ -329,6 +347,7 @@ public class ReportesService {
                 "codigoEspacio",
                 "horaInicio",
                 "horaCancelacion",
+            "canceladoPor",
                 "motivoCancelacion");
 
         List<ReporteTablaFilaDTO> filas = canceladas.stream()
@@ -340,6 +359,8 @@ public class ReportesService {
                     row.put("codigoEspacio", reserva.getEspacio().getCodigoEspacio());
                     row.put("horaInicio", formatDateTime(reserva.getHoraInicio()));
                     row.put("horaCancelacion", formatDateTime(reserva.getHoraFin()));
+                        row.put("canceladoPor", reserva.getCanceladoPor() == null || reserva.getCanceladoPor().getUsername() == null
+                            || reserva.getCanceladoPor().getUsername().isBlank() ? "SIN_USUARIO" : reserva.getCanceladoPor().getUsername());
                     row.put("motivoCancelacion", normalizarMotivo(reserva.getMotivoCancelacion()));
                     return new ReporteTablaFilaDTO(row);
                 })
@@ -607,6 +628,648 @@ public class ReportesService {
         1L);
     }
 
+    @Transactional(readOnly = true)
+    public ReporteTablaResponseDTO obtenerHistorialConsolidadoCliente(String placa) {
+        String placaNormalizada = normalizarTexto(placa).toUpperCase(Locale.ROOT);
+        if (placaNormalizada.isBlank()) {
+            throw new IllegalArgumentException("La placa es obligatoria para consultar historial consolidado");
+        }
+
+        List<Ticket> tickets = ticketRepository.findAllByPlacaIgnoreCaseOrderByHoraEntradaDesc(placaNormalizada);
+        List<Reserva> reservas = reservaRepository.findAllByPlacaIgnoreCaseOrderByFechaCreacionDesc(placaNormalizada);
+        List<Pago> pagos = pagoRepository.findAll().stream()
+                .filter(pago -> pago.getTicket() != null)
+                .filter(pago -> pago.getTicket().getPlaca() != null)
+                .filter(pago -> placaNormalizada.equalsIgnoreCase(pago.getTicket().getPlaca()))
+                .toList();
+
+        record EventoHistorial(LocalDateTime fechaEvento, Map<String, String> fila) {
+        }
+
+        List<EventoHistorial> eventos = new java.util.ArrayList<>();
+
+        for (Reserva reserva : reservas) {
+            Map<String, String> filaCreacion = new LinkedHashMap<>();
+            filaCreacion.put("fechaEvento", formatDateTime(reserva.getFechaCreacion()));
+            filaCreacion.put("tipoEvento", "RESERVA_CREADA");
+            filaCreacion.put("codigo", reserva.getCodigoReserva());
+            filaCreacion.put("estado", reserva.getEstado() == null ? "-" : reserva.getEstado().getNombre());
+            filaCreacion.put("detalle", "Inicio: " + formatDateTime(reserva.getHoraInicio()));
+            filaCreacion.put("monto", "-");
+            eventos.add(new EventoHistorial(reserva.getFechaCreacion(), filaCreacion));
+
+            if (reserva.getHoraFin() != null && reserva.getEstado() != null
+                    && ESTADO_RESERVA_CANCELADA.equalsIgnoreCase(reserva.getEstado().getNombre())) {
+                Map<String, String> filaCancelacion = new LinkedHashMap<>();
+                filaCancelacion.put("fechaEvento", formatDateTime(reserva.getHoraFin()));
+                filaCancelacion.put("tipoEvento", "RESERVA_CANCELADA");
+                filaCancelacion.put("codigo", reserva.getCodigoReserva());
+                filaCancelacion.put("estado", reserva.getEstado().getNombre());
+                filaCancelacion.put("detalle", "Motivo: " + normalizarMotivo(reserva.getMotivoCancelacion()));
+                filaCancelacion.put("monto", "-");
+                eventos.add(new EventoHistorial(reserva.getHoraFin(), filaCancelacion));
+            }
+        }
+
+        for (Ticket ticket : tickets) {
+            Map<String, String> filaEntrada = new LinkedHashMap<>();
+            filaEntrada.put("fechaEvento", formatDateTime(ticket.getHoraEntrada()));
+            filaEntrada.put("tipoEvento", "TICKET_ENTRADA");
+            filaEntrada.put("codigo", ticket.getCodigoTicket());
+            filaEntrada.put("estado", ticket.getEstado() == null ? "-" : ticket.getEstado().getNombre());
+            filaEntrada.put("detalle", "Espacio: " + (ticket.getEspacio() == null ? "-" : ticket.getEspacio().getCodigoEspacio()));
+            filaEntrada.put("monto", "-");
+            eventos.add(new EventoHistorial(ticket.getHoraEntrada(), filaEntrada));
+
+            if (ticket.getHoraSalida() != null) {
+                Map<String, String> filaSalida = new LinkedHashMap<>();
+                filaSalida.put("fechaEvento", formatDateTime(ticket.getHoraSalida()));
+                filaSalida.put("tipoEvento", "TICKET_SALIDA");
+                filaSalida.put("codigo", ticket.getCodigoTicket());
+                filaSalida.put("estado", ticket.getEstado() == null ? "-" : ticket.getEstado().getNombre());
+                filaSalida.put("detalle", "Salida registrada");
+                filaSalida.put("monto", ticket.getMontoTotal() == null ? "-" : ticket.getMontoTotal().toPlainString());
+                eventos.add(new EventoHistorial(ticket.getHoraSalida(), filaSalida));
+            }
+        }
+
+        for (Pago pago : pagos) {
+            Map<String, String> filaPago = new LinkedHashMap<>();
+            filaPago.put("fechaEvento", formatDateTime(pago.getHoraPago()));
+            filaPago.put("tipoEvento", "PAGO");
+            filaPago.put("codigo", pago.getTicket() == null ? "-" : pago.getTicket().getCodigoTicket());
+            filaPago.put("estado", "COBRADO");
+            filaPago.put("detalle", "Metodo: " + normalizarMetodoPago(pago.getMetodoPago()));
+            filaPago.put("monto", pago.getMonto() == null ? "-" : pago.getMonto().toPlainString());
+            eventos.add(new EventoHistorial(pago.getHoraPago(), filaPago));
+        }
+
+        List<String> columnas = List.of("fechaEvento", "tipoEvento", "codigo", "estado", "detalle", "monto");
+        List<ReporteTablaFilaDTO> filas = eventos.stream()
+                .sorted((a, b) -> {
+                    LocalDateTime fa = a.fechaEvento() == null ? LocalDateTime.MIN : a.fechaEvento();
+                    LocalDateTime fb = b.fechaEvento() == null ? LocalDateTime.MIN : b.fechaEvento();
+                    return fb.compareTo(fa);
+                })
+                .map(evento -> new ReporteTablaFilaDTO(evento.fila()))
+                .toList();
+
+        return new ReporteTablaResponseDTO(
+                "Historial consolidado por cliente (placa)",
+                columnas,
+                filas,
+                (long) filas.size());
+    }
+
+    @Transactional(readOnly = true)
+    public ReporteTablaResponseDTO obtenerTrazabilidadTicket(String codigoTicket) {
+        String codigoNormalizado = normalizarTexto(codigoTicket);
+        if (codigoNormalizado.isBlank()) {
+            throw new IllegalArgumentException("El codigo de ticket es obligatorio para trazabilidad");
+        }
+
+        Ticket ticket = ticketRepository.findByCodigoTicketIgnoreCase(codigoNormalizado)
+                .orElseThrow(() -> new NoSuchElementException("Ticket no encontrado"));
+
+        Pago pago = pagoRepository.findAll().stream()
+                .filter(item -> item.getTicket() != null && item.getTicket().getId() != null)
+                .filter(item -> ticket.getId() != null && ticket.getId().equals(item.getTicket().getId()))
+                .findFirst()
+                .orElse(null);
+
+        List<String> columnas = List.of("paso", "fechaEvento", "tipoEvento", "estado", "detalle", "usuario");
+        List<ReporteTablaFilaDTO> filas = new java.util.ArrayList<>();
+
+        int paso = 1;
+
+        Map<String, String> filaCreacion = new LinkedHashMap<>();
+        filaCreacion.put("paso", String.valueOf(paso++));
+        filaCreacion.put("fechaEvento", formatDateTime(ticket.getFechaCreacion()));
+        filaCreacion.put("tipoEvento", "TICKET_CREADO");
+        filaCreacion.put("estado", ticket.getEstado() == null ? "-" : ticket.getEstado().getNombre());
+        filaCreacion.put("detalle", "Codigo: " + ticket.getCodigoTicket() + " | Placa: " + ticket.getPlaca());
+        filaCreacion.put("usuario", ticket.getCreadoPor() == null || ticket.getCreadoPor().getUsername() == null ? "-" : ticket.getCreadoPor().getUsername());
+        filas.add(new ReporteTablaFilaDTO(filaCreacion));
+
+        Map<String, String> filaEntrada = new LinkedHashMap<>();
+        filaEntrada.put("paso", String.valueOf(paso++));
+        filaEntrada.put("fechaEvento", formatDateTime(ticket.getHoraEntrada()));
+        filaEntrada.put("tipoEvento", "ENTRADA");
+        filaEntrada.put("estado", ticket.getEstado() == null ? "-" : ticket.getEstado().getNombre());
+        filaEntrada.put("detalle", "Espacio: " + (ticket.getEspacio() == null ? "-" : ticket.getEspacio().getCodigoEspacio()));
+        filaEntrada.put("usuario", ticket.getCreadoPor() == null || ticket.getCreadoPor().getUsername() == null ? "-" : ticket.getCreadoPor().getUsername());
+        filas.add(new ReporteTablaFilaDTO(filaEntrada));
+
+        if (ticket.getHoraSalida() != null) {
+            Map<String, String> filaSalida = new LinkedHashMap<>();
+            filaSalida.put("paso", String.valueOf(paso++));
+            filaSalida.put("fechaEvento", formatDateTime(ticket.getHoraSalida()));
+            filaSalida.put("tipoEvento", "SALIDA");
+            filaSalida.put("estado", ticket.getEstado() == null ? "-" : ticket.getEstado().getNombre());
+            filaSalida.put("detalle", "Monto total: " + (ticket.getMontoTotal() == null ? "-" : ticket.getMontoTotal().toPlainString()));
+            filaSalida.put("usuario", "-");
+            filas.add(new ReporteTablaFilaDTO(filaSalida));
+        }
+
+        if (pago != null) {
+            Map<String, String> filaPago = new LinkedHashMap<>();
+            filaPago.put("paso", String.valueOf(paso));
+            filaPago.put("fechaEvento", formatDateTime(pago.getHoraPago()));
+            filaPago.put("tipoEvento", "PAGO");
+            filaPago.put("estado", "COBRADO");
+            filaPago.put("detalle", "Metodo: " + normalizarMetodoPago(pago.getMetodoPago()) + " | Monto: "
+                    + (pago.getMonto() == null ? "-" : pago.getMonto().toPlainString()));
+            filaPago.put("usuario", pago.getProcesadoPor() == null || pago.getProcesadoPor().getUsername() == null
+                    ? "-"
+                    : pago.getProcesadoPor().getUsername());
+            filas.add(new ReporteTablaFilaDTO(filaPago));
+        }
+
+        return new ReporteTablaResponseDTO(
+                "Trazabilidad de ticket",
+                columnas,
+                filas,
+                (long) filas.size());
+    }
+
+    @Transactional(readOnly = true)
+    public ReporteTablaResponseDTO obtenerConsultasPorRangoMontos(
+            BigDecimal montoDesde,
+            BigDecimal montoHasta,
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+
+        BigDecimal desde = montoDesde == null ? BigDecimal.ZERO : montoDesde;
+        BigDecimal hasta = montoHasta == null ? new BigDecimal("999999999") : montoHasta;
+
+        if (desde.compareTo(BigDecimal.ZERO) < 0 || hasta.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El rango de montos no puede ser negativo");
+        }
+        if (hasta.compareTo(desde) < 0) {
+            throw new IllegalArgumentException("montoHasta no puede ser menor que montoDesde");
+        }
+
+        List<Pago> pagos = obtenerPagosEnRango(rango).stream()
+                .filter(pago -> pago.getMonto() != null)
+                .filter(pago -> pago.getMonto().compareTo(desde) >= 0 && pago.getMonto().compareTo(hasta) <= 0)
+                .sorted((a, b) -> {
+                    LocalDateTime fa = a.getHoraPago() == null ? LocalDateTime.MIN : a.getHoraPago();
+                    LocalDateTime fb = b.getHoraPago() == null ? LocalDateTime.MIN : b.getHoraPago();
+                    return fb.compareTo(fa);
+                })
+                .toList();
+
+        List<String> columnas = List.of(
+                "codigoTicket",
+                "placa",
+                "tipoVehiculo",
+                "monto",
+                "metodoPago",
+                "horaPago",
+                "procesadoPor");
+
+        List<ReporteTablaFilaDTO> filas = pagos.stream()
+                .map(pago -> {
+                    Map<String, String> row = new LinkedHashMap<>();
+                    row.put("codigoTicket", pago.getTicket() == null ? "-" : pago.getTicket().getCodigoTicket());
+                    row.put("placa", pago.getTicket() == null ? "-" : valorCsv(pago.getTicket().getPlaca()));
+                    row.put("tipoVehiculo", pago.getTicket() == null || pago.getTicket().getTipoVehiculo() == null
+                            ? "-"
+                            : valorCsv(pago.getTicket().getTipoVehiculo().getNombre()));
+                    row.put("monto", pago.getMonto().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+                    row.put("metodoPago", normalizarMetodoPago(pago.getMetodoPago()));
+                    row.put("horaPago", formatDateTime(pago.getHoraPago()));
+                    row.put("procesadoPor", pago.getProcesadoPor() == null || pago.getProcesadoPor().getUsername() == null
+                            ? "-"
+                            : pago.getProcesadoPor().getUsername());
+                    return new ReporteTablaFilaDTO(row);
+                })
+                .toList();
+
+        return new ReporteTablaResponseDTO(
+                "Consulta por rango de montos",
+                columnas,
+                filas,
+                (long) filas.size());
+    }
+
+        @Transactional(readOnly = true)
+        public ReporteSerieTemporalResponseDTO obtenerIngresosPorPeriodo(
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            String granularidad) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        String granularidadNormalizada = normalizarGranularidad(granularidad);
+        List<Pago> pagos = obtenerPagosEnRango(rango);
+
+        Map<String, BigDecimal> ingresosPorPeriodo = pagos.stream()
+            .filter(pago -> pago.getHoraPago() != null)
+            .collect(Collectors.groupingBy(
+                pago -> construirEtiquetaPeriodo(pago.getHoraPago(), granularidadNormalizada),
+                LinkedHashMap::new,
+                Collectors.reducing(
+                    BigDecimal.ZERO,
+                    pago -> pago.getMonto() == null ? BigDecimal.ZERO : pago.getMonto(),
+                    BigDecimal::add)));
+
+        List<ReporteSerieTemporalItemDTO> items = ingresosPorPeriodo.entrySet().stream()
+            .map(entry -> new ReporteSerieTemporalItemDTO(entry.getKey(), entry.getValue()))
+            .toList();
+
+        return new ReporteSerieTemporalResponseDTO("Ingresos por " + granularidadNormalizada, MONEDA_DEFAULT, items);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteFinancieroResponseDTO obtenerPromediosFinancieros(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        List<Pago> pagos = obtenerPagosEnRango(rango);
+
+        BigDecimal sumaMontos = pagos.stream()
+            .map(Pago::getMonto)
+            .filter(java.util.Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal ticketPromedio = pagos.isEmpty()
+            ? BigDecimal.ZERO
+            : sumaMontos.divide(BigDecimal.valueOf(pagos.size()), 2, java.math.RoundingMode.HALF_UP);
+
+        List<Long> estadiasMinutos = pagos.stream()
+            .map(Pago::getTicket)
+            .filter(java.util.Objects::nonNull)
+            .map(ticket -> calcularEstadiaMinutos(ticket, null))
+            .filter(minutos -> minutos > 0)
+            .toList();
+
+        BigDecimal estadiaPromedioMinutos = estadiasMinutos.isEmpty()
+            ? BigDecimal.ZERO
+            : BigDecimal.valueOf(
+                estadiasMinutos.stream().mapToLong(Long::longValue).average().orElse(0.0d))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+
+        List<ReporteIndicadorFinancieroDTO> indicadores = List.of(
+            new ReporteIndicadorFinancieroDTO(
+                "TICKET_PROMEDIO",
+                "Ticket promedio",
+                ticketPromedio,
+                MONEDA_DEFAULT,
+                null),
+            new ReporteIndicadorFinancieroDTO(
+                "ESTADIA_PROMEDIO_MIN",
+                "Estadia promedio",
+                estadiaPromedioMinutos,
+                "min",
+                null));
+
+        return new ReporteFinancieroResponseDTO(
+            "Promedios financieros",
+            construirTextoPeriodo(rango),
+            MONEDA_DEFAULT,
+            indicadores);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteTablaResponseDTO obtenerIngresosPorTipoVehiculo(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        List<Pago> pagos = obtenerPagosEnRango(rango);
+
+        Map<String, BigDecimal> ingresosPorTipo = pagos.stream()
+            .collect(Collectors.groupingBy(
+                pago -> {
+                    if (pago.getTicket() == null || pago.getTicket().getTipoVehiculo() == null
+                        || pago.getTicket().getTipoVehiculo().getNombre() == null) {
+                    return "SIN_TIPO";
+                    }
+                    return pago.getTicket().getTipoVehiculo().getNombre();
+                },
+                LinkedHashMap::new,
+                Collectors.reducing(
+                    BigDecimal.ZERO,
+                    pago -> pago.getMonto() == null ? BigDecimal.ZERO : pago.getMonto(),
+                    BigDecimal::add)));
+
+        List<String> columnas = List.of("tipoVehiculo", "ingresos", "moneda");
+        List<ReporteTablaFilaDTO> filas = ingresosPorTipo.entrySet().stream()
+            .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+            .map(entry -> {
+                Map<String, String> row = new LinkedHashMap<>();
+                row.put("tipoVehiculo", entry.getKey());
+                row.put("ingresos", entry.getValue().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+                row.put("moneda", MONEDA_DEFAULT);
+                return new ReporteTablaFilaDTO(row);
+            })
+            .toList();
+
+        return new ReporteTablaResponseDTO("Ingresos por tipo de vehiculo", columnas, filas, (long) filas.size());
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteTablaResponseDTO obtenerIngresosPorMetodoPago(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        List<Pago> pagos = obtenerPagosEnRango(rango);
+
+        Map<String, BigDecimal> ingresosPorMetodo = pagos.stream()
+            .collect(Collectors.groupingBy(
+                pago -> normalizarMetodoPago(pago.getMetodoPago()),
+                LinkedHashMap::new,
+                Collectors.reducing(
+                    BigDecimal.ZERO,
+                    pago -> pago.getMonto() == null ? BigDecimal.ZERO : pago.getMonto(),
+                    BigDecimal::add)));
+
+        List<String> columnas = List.of("metodoPago", "ingresos", "moneda");
+        List<ReporteTablaFilaDTO> filas = ingresosPorMetodo.entrySet().stream()
+            .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+            .map(entry -> {
+                Map<String, String> row = new LinkedHashMap<>();
+                row.put("metodoPago", entry.getKey());
+                row.put("ingresos", entry.getValue().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+                row.put("moneda", MONEDA_DEFAULT);
+                return new ReporteTablaFilaDTO(row);
+            })
+            .toList();
+
+        return new ReporteTablaResponseDTO("Ingresos por metodo de pago", columnas, filas, (long) filas.size());
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteTopNResponseDTO obtenerRankingHorasPicoPorIngreso(
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            Integer limite) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        int limiteNormalizado = limite == null ? 5 : Math.min(Math.max(limite, 1), 24);
+        List<Pago> pagos = obtenerPagosEnRango(rango);
+
+        Map<Integer, BigDecimal> ingresosPorHora = pagos.stream()
+            .filter(pago -> pago.getHoraPago() != null)
+            .collect(Collectors.groupingBy(
+                pago -> pago.getHoraPago().getHour(),
+                LinkedHashMap::new,
+                Collectors.reducing(
+                    BigDecimal.ZERO,
+                    pago -> pago.getMonto() == null ? BigDecimal.ZERO : pago.getMonto(),
+                    BigDecimal::add)));
+
+        List<ReporteTopNItemDTO> items = ingresosPorHora.entrySet().stream()
+            .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+            .limit(limiteNormalizado)
+            .map(entry -> entry)
+            .toList()
+            .stream()
+            .map(entry -> new ReporteTopNItemDTO(
+                0,
+                String.format("%02d", entry.getKey()),
+                String.format("%02d:00 - %02d:59", entry.getKey(), entry.getKey()),
+                entry.getValue().setScale(2, java.math.RoundingMode.HALF_UP),
+                MONEDA_DEFAULT))
+            .toList();
+
+        List<ReporteTopNItemDTO> itemsConPosicion = java.util.stream.IntStream.range(0, items.size())
+            .mapToObj(index -> {
+                ReporteTopNItemDTO item = items.get(index);
+                return new ReporteTopNItemDTO(
+                    index + 1,
+                    item.getClave(),
+                    item.getDescripcion(),
+                    item.getValor(),
+                    item.getUnidad());
+            })
+            .toList();
+
+        return new ReporteTopNResponseDTO(
+            "Ranking de horas pico por ingreso",
+            "hora",
+            MONEDA_DEFAULT,
+            limiteNormalizado,
+            itemsConPosicion);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteComparativoResponseDTO obtenerComparativoEntradasSalidas(
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            String modoComparacion) {
+        RangosComparacion rangos = resolverRangosComparacion(fechaDesde, fechaHasta, modoComparacion);
+
+        long entradasActual = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+            rangos.actual().fechaDesde(),
+            rangos.actual().fechaHasta()).size();
+        long salidasActual = ticketRepository.findAllByHoraSalidaGreaterThanEqualAndHoraSalidaLessThan(
+            rangos.actual().fechaDesde(),
+            rangos.actual().fechaHasta()).size();
+
+        long entradasComparado = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+            rangos.comparado().fechaDesde(),
+            rangos.comparado().fechaHasta()).size();
+        long salidasComparado = ticketRepository.findAllByHoraSalidaGreaterThanEqualAndHoraSalidaLessThan(
+            rangos.comparado().fechaDesde(),
+            rangos.comparado().fechaHasta()).size();
+
+        List<ReporteComparativoItemDTO> items = List.of(
+            construirComparativoItem(
+                "Entradas",
+                BigDecimal.valueOf(entradasActual),
+                BigDecimal.valueOf(entradasComparado)),
+            construirComparativoItem(
+                "Salidas",
+                BigDecimal.valueOf(salidasActual),
+                BigDecimal.valueOf(salidasComparado)),
+            construirComparativoItem(
+                "Flujo neto",
+                BigDecimal.valueOf(entradasActual - salidasActual),
+                BigDecimal.valueOf(entradasComparado - salidasComparado)));
+
+        return new ReporteComparativoResponseDTO(
+            "Comparativo de entradas y salidas",
+            "tickets",
+            construirTextoPeriodo(rangos.actual()),
+            construirTextoPeriodo(rangos.comparado()),
+            items);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteComparativoResponseDTO obtenerComparativoReservasPorEstado(
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            String modoComparacion) {
+        RangosComparacion rangos = resolverRangosComparacion(fechaDesde, fechaHasta, modoComparacion);
+
+        List<Reserva> reservasActual = obtenerReservasCreadasEnRango(rangos.actual());
+        List<Reserva> reservasComparado = obtenerReservasCreadasEnRango(rangos.comparado());
+
+        List<String> estados = List.of(
+            ESTADO_RESERVA_PENDIENTE,
+            ESTADO_RESERVA_ACTIVA,
+            ESTADO_RESERVA_FINALIZADA,
+            ESTADO_RESERVA_CANCELADA);
+
+        List<ReporteComparativoItemDTO> items = estados.stream()
+            .map(estado -> construirComparativoItem(
+                estado,
+                BigDecimal.valueOf(contarPorEstado(reservasActual, estado)),
+                BigDecimal.valueOf(contarPorEstado(reservasComparado, estado))))
+            .toList();
+
+        return new ReporteComparativoResponseDTO(
+            "Comparativo de reservas por estado",
+            "reservas",
+            construirTextoPeriodo(rangos.actual()),
+            construirTextoPeriodo(rangos.comparado()),
+            items);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteComparativoResponseDTO obtenerComparativoOcupacionPorFranja(
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            String modoComparacion) {
+        RangosComparacion rangos = resolverRangosComparacion(fechaDesde, fechaHasta, modoComparacion);
+
+        List<Ticket> ticketsActual = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+            rangos.actual().fechaDesde(),
+            rangos.actual().fechaHasta());
+        List<Ticket> ticketsComparado = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+            rangos.comparado().fechaDesde(),
+            rangos.comparado().fechaHasta());
+
+        Map<Integer, Long> actualPorHora = ticketsActual.stream()
+            .filter(ticket -> ticket.getHoraEntrada() != null)
+            .collect(Collectors.groupingBy(ticket -> ticket.getHoraEntrada().getHour(), Collectors.counting()));
+        Map<Integer, Long> comparadoPorHora = ticketsComparado.stream()
+            .filter(ticket -> ticket.getHoraEntrada() != null)
+            .collect(Collectors.groupingBy(ticket -> ticket.getHoraEntrada().getHour(), Collectors.counting()));
+
+        List<ReporteComparativoItemDTO> items = java.util.stream.IntStream.range(0, 24)
+            .mapToObj(hora -> construirComparativoItem(
+                String.format("%02d:00", hora),
+                BigDecimal.valueOf(actualPorHora.getOrDefault(hora, 0L)),
+                BigDecimal.valueOf(comparadoPorHora.getOrDefault(hora, 0L))))
+            .toList();
+
+        return new ReporteComparativoResponseDTO(
+            "Comparativo de ocupacion por franja horaria",
+            "tickets",
+            construirTextoPeriodo(rangos.actual()),
+            construirTextoPeriodo(rangos.comparado()),
+            items);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteResumenKpiResponseDTO obtenerTasaConversionReservaIngreso(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        List<Reserva> reservasProgramadas = obtenerReservasProgramadasEnRango(rango);
+        List<Pago> pagos = pagoRepository.findAll();
+
+        long convertidas = reservasProgramadas.stream()
+            .filter(reserva -> existePagoAsociableAReserva(reserva, pagos))
+            .count();
+        long total = reservasProgramadas.size();
+        long noConvertidas = Math.max(0L, total - convertidas);
+
+        BigDecimal tasaConversion = calcularPorcentaje(convertidas, total);
+
+        List<ReporteKpiDTO> kpis = List.of(
+            new ReporteKpiDTO("RES_PROGRAMADAS", "Reservas programadas", BigDecimal.valueOf(total), "reservas"),
+            new ReporteKpiDTO("RES_CONVERTIDAS", "Convertidas a ingreso", BigDecimal.valueOf(convertidas), "reservas"),
+            new ReporteKpiDTO("RES_NO_CONVERTIDAS", "No convertidas", BigDecimal.valueOf(noConvertidas), "reservas"),
+            new ReporteKpiDTO("TASA_CONVERSION", "Tasa conversion", tasaConversion, "%"));
+
+        return new ReporteResumenKpiResponseDTO("Conversion reserva -> ingreso efectivo", kpis);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteResumenKpiResponseDTO obtenerTasaNoShowReservas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        List<Reserva> reservasProgramadas = obtenerReservasProgramadasEnRango(rango);
+
+        long noShow = reservasProgramadas.stream()
+            .filter(this::esReservaNoShow)
+            .count();
+        long total = reservasProgramadas.size();
+
+        BigDecimal tasaNoShow = calcularPorcentaje(noShow, total);
+
+        List<ReporteKpiDTO> kpis = List.of(
+            new ReporteKpiDTO("RES_PROGRAMADAS", "Reservas programadas", BigDecimal.valueOf(total), "reservas"),
+            new ReporteKpiDTO("RES_NO_SHOW", "No-show", BigDecimal.valueOf(noShow), "reservas"),
+            new ReporteKpiDTO("TASA_NO_SHOW", "Tasa no-show", tasaNoShow, "%"));
+
+        return new ReporteResumenKpiResponseDTO("Tasa de no-show de reservas", kpis);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteTablaResponseDTO obtenerCancelacionesPorOperador(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        List<Reserva> canceladas = obtenerReservasCanceladasEnRango(rango);
+
+        Map<String, Long> cancelacionesPorOperador = canceladas.stream()
+            .collect(Collectors.groupingBy(
+                reserva -> {
+                    if (reserva.getCanceladoPor() == null || reserva.getCanceladoPor().getUsername() == null
+                        || reserva.getCanceladoPor().getUsername().isBlank()) {
+                    return "SIN_USUARIO";
+                    }
+                    return reserva.getCanceladoPor().getUsername();
+                },
+                Collectors.counting()));
+
+        List<String> columnas = List.of("operador", "cancelaciones");
+        List<ReporteTablaFilaDTO> filas = cancelacionesPorOperador.entrySet().stream()
+            .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+            .map(entry -> {
+                Map<String, String> row = new LinkedHashMap<>();
+                row.put("operador", entry.getKey());
+                row.put("cancelaciones", String.valueOf(entry.getValue()));
+                return new ReporteTablaFilaDTO(row);
+            })
+            .toList();
+
+        return new ReporteTablaResponseDTO("Cancelaciones por usuario operador", columnas, filas, (long) filas.size());
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteTablaResponseDTO obtenerTiempoPromedioOcupacionPorTipo(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        List<Ticket> tickets = ticketRepository.findAllByHoraSalidaGreaterThanEqualAndHoraSalidaLessThan(
+            rango.fechaDesde(),
+            rango.fechaHasta()).stream()
+            .filter(ticket -> ticket.getHoraEntrada() != null)
+            .filter(ticket -> ticket.getHoraSalida() != null)
+            .toList();
+
+        Map<String, List<Long>> minutosPorTipo = tickets.stream()
+            .collect(Collectors.groupingBy(
+                ticket -> {
+                    if (ticket.getEspacio() == null || ticket.getEspacio().getTipoVehiculo() == null
+                        || ticket.getEspacio().getTipoVehiculo().getNombre() == null) {
+                    return "SIN_TIPO";
+                    }
+                    return ticket.getEspacio().getTipoVehiculo().getNombre();
+                },
+                Collectors.mapping(ticket -> calcularEstadiaMinutos(ticket, ticket.getHoraSalida()), Collectors.toList())));
+
+        List<String> columnas = List.of("tipoEspacio", "ticketsFinalizados", "minutosPromedio", "horasPromedio");
+        List<ReporteTablaFilaDTO> filas = minutosPorTipo.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> {
+                List<Long> minutos = entry.getValue();
+                double promedioMinutos = minutos.isEmpty()
+                    ? 0.0d
+                    : minutos.stream().mapToLong(Long::longValue).average().orElse(0.0d);
+
+                Map<String, String> row = new LinkedHashMap<>();
+                row.put("tipoEspacio", entry.getKey());
+                row.put("ticketsFinalizados", String.valueOf(minutos.size()));
+                row.put("minutosPromedio", String.format("%.2f", promedioMinutos));
+                row.put("horasPromedio", String.format("%.2f", promedioMinutos / 60.0d));
+                return new ReporteTablaFilaDTO(row);
+            })
+            .toList();
+
+        return new ReporteTablaResponseDTO("Tiempo promedio de ocupacion por tipo de espacio", columnas, filas, (long) filas.size());
+        }
+
         @Transactional(readOnly = true)
         public byte[] exportarTicketsEnRangoCsv(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
@@ -765,9 +1428,201 @@ public class ReportesService {
             return generarPdf("Cancelaciones de reservas con motivo", subtitulo, headers, rows);
             }
 
+                public byte[] exportarOperativosAvanzadoCsv(
+                    LocalDateTime fechaDesde,
+                    LocalDateTime fechaHasta,
+                    Long usuarioId,
+                    String tipoVehiculo) {
+                return exportarOperativosAvanzadoCsvImpl(fechaDesde, fechaHasta, usuarioId, tipoVehiculo);
+                }
+
+                public byte[] exportarFinancierosAvanzadoCsv(
+                    LocalDateTime fechaDesde,
+                    LocalDateTime fechaHasta,
+                    Long usuarioId,
+                    String tipoVehiculo) {
+                return exportarFinancierosAvanzadoCsvImpl(fechaDesde, fechaHasta, usuarioId, tipoVehiculo);
+                }
+
+                public byte[] exportarResumenEjecutivoPdf(
+                    LocalDateTime fechaDesde,
+                    LocalDateTime fechaHasta,
+                    Long usuarioId,
+                    String tipoVehiculo) {
+                return exportarResumenEjecutivoPdfImpl(fechaDesde, fechaHasta, usuarioId, tipoVehiculo);
+                }
+
+                public String construirNombreArchivoEstandar(String modulo, String tipoReporte, String extension) {
+                return construirNombreArchivoEstandarImpl(modulo, tipoReporte, extension);
+                }
+
+            @Transactional(readOnly = true)
+                private byte[] exportarOperativosAvanzadoCsvImpl(
+                    LocalDateTime fechaDesde,
+                    LocalDateTime fechaHasta,
+                    Long usuarioId,
+                    String tipoVehiculo) {
+            RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+            String tipoNormalizado = normalizarTexto(tipoVehiculo).toUpperCase(Locale.ROOT);
+
+            List<Ticket> tickets = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+                rango.fechaDesde(),
+                rango.fechaHasta()).stream()
+                .filter(ticket -> filtraUsuarioTicket(ticket, usuarioId))
+                .filter(ticket -> filtraTipoVehiculoTicket(ticket, tipoNormalizado))
+                .sorted((a, b) -> {
+                    LocalDateTime fa = a.getHoraEntrada() == null ? LocalDateTime.MIN : a.getHoraEntrada();
+                    LocalDateTime fb = b.getHoraEntrada() == null ? LocalDateTime.MIN : b.getHoraEntrada();
+                    return fb.compareTo(fa);
+                })
+                .toList();
+
+            String[] headers = {
+                "codigoTicket",
+                "placa",
+                "tipoVehiculo",
+                "codigoEspacio",
+                "usuario",
+                "horaEntrada",
+                "horaSalida",
+                "minutosEstadia",
+                "montoTotal",
+                "estado"
+            };
+
+            return generarCsv(headers, tickets.stream()
+                .map(ticket -> List.of(
+                    valorCsv(ticket.getCodigoTicket()),
+                    valorCsv(ticket.getPlaca()),
+                    ticket.getTipoVehiculo() == null ? "-" : valorCsv(ticket.getTipoVehiculo().getNombre()),
+                    ticket.getEspacio() == null ? "-" : valorCsv(ticket.getEspacio().getCodigoEspacio()),
+                    obtenerEtiquetaUsuario(ticket),
+                    formatDateTime(ticket.getHoraEntrada()),
+                    formatDateTime(ticket.getHoraSalida()),
+                    String.valueOf(calcularEstadiaMinutos(ticket, ticket.getHoraSalida())),
+                    ticket.getMontoTotal() == null ? "-" : ticket.getMontoTotal().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
+                    ticket.getEstado() == null ? "-" : valorCsv(ticket.getEstado().getNombre())))
+                .toList());
+            }
+
+            @Transactional(readOnly = true)
+                private byte[] exportarFinancierosAvanzadoCsvImpl(
+                    LocalDateTime fechaDesde,
+                    LocalDateTime fechaHasta,
+                    Long usuarioId,
+                    String tipoVehiculo) {
+            RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+            String tipoNormalizado = normalizarTexto(tipoVehiculo).toUpperCase(Locale.ROOT);
+
+            List<Pago> pagos = obtenerPagosEnRango(rango).stream()
+                .filter(pago -> filtraUsuarioPago(pago, usuarioId))
+                .filter(pago -> filtraTipoVehiculoPago(pago, tipoNormalizado))
+                .sorted((a, b) -> {
+                    LocalDateTime fa = a.getHoraPago() == null ? LocalDateTime.MIN : a.getHoraPago();
+                    LocalDateTime fb = b.getHoraPago() == null ? LocalDateTime.MIN : b.getHoraPago();
+                    return fb.compareTo(fa);
+                })
+                .toList();
+
+            String[] headers = {
+                "codigoTicket",
+                "placa",
+                "tipoVehiculo",
+                "monto",
+                "metodoPago",
+                "horaPago",
+                "procesadoPor",
+                "usuarioCreacionTicket"
+            };
+
+            return generarCsv(headers, pagos.stream()
+                .map(pago -> List.of(
+                    pago.getTicket() == null ? "-" : valorCsv(pago.getTicket().getCodigoTicket()),
+                    pago.getTicket() == null ? "-" : valorCsv(pago.getTicket().getPlaca()),
+                    pago.getTicket() == null || pago.getTicket().getTipoVehiculo() == null ? "-"
+                        : valorCsv(pago.getTicket().getTipoVehiculo().getNombre()),
+                    pago.getMonto() == null ? "-" : pago.getMonto().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
+                    normalizarMetodoPago(pago.getMetodoPago()),
+                    formatDateTime(pago.getHoraPago()),
+                    pago.getProcesadoPor() == null || pago.getProcesadoPor().getUsername() == null ? "-"
+                        : valorCsv(pago.getProcesadoPor().getUsername()),
+                    pago.getTicket() == null || pago.getTicket().getCreadoPor() == null || pago.getTicket().getCreadoPor().getUsername() == null
+                        ? "-"
+                        : valorCsv(pago.getTicket().getCreadoPor().getUsername())))
+                .toList());
+            }
+
+            @Transactional(readOnly = true)
+                private byte[] exportarResumenEjecutivoPdfImpl(
+                    LocalDateTime fechaDesde,
+                    LocalDateTime fechaHasta,
+                    Long usuarioId,
+                    String tipoVehiculo) {
+            RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+            String tipoNormalizado = normalizarTexto(tipoVehiculo).toUpperCase(Locale.ROOT);
+
+            List<Ticket> tickets = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+                rango.fechaDesde(),
+                rango.fechaHasta()).stream()
+                .filter(ticket -> filtraUsuarioTicket(ticket, usuarioId))
+                .filter(ticket -> filtraTipoVehiculoTicket(ticket, tipoNormalizado))
+                .toList();
+
+            List<Pago> pagos = obtenerPagosEnRango(rango).stream()
+                .filter(pago -> filtraUsuarioPago(pago, usuarioId))
+                .filter(pago -> filtraTipoVehiculoPago(pago, tipoNormalizado))
+                .toList();
+
+            BigDecimal ingresos = pagos.stream()
+                .map(Pago::getMonto)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+
+            long ticketsActivos = tickets.stream()
+                .filter(ticket -> ticket.getEstado() != null)
+                .filter(ticket -> ESTADO_TICKET_ACTIVO.equalsIgnoreCase(ticket.getEstado().getNombre()))
+                .count();
+
+            long ticketsFinalizados = tickets.stream()
+                .filter(ticket -> ticket.getHoraSalida() != null)
+                .count();
+
+            String subtitulo = "Periodo: " + formatDateTime(rango.fechaDesde()) + " a " + formatDateTime(rango.fechaHasta())
+                + " | Usuario: " + (usuarioId == null ? "TODOS" : usuarioId)
+                + " | Tipo vehiculo: " + (tipoNormalizado.isBlank() ? "TODOS" : tipoNormalizado);
+
+            List<String> headers = List.of("Indicador", "Valor");
+            List<List<String>> rows = List.of(
+                List.of("Ingresos totales", ingresos.toPlainString() + " " + MONEDA_DEFAULT),
+                List.of("Tickets en periodo", String.valueOf(tickets.size())),
+                List.of("Tickets finalizados", String.valueOf(ticketsFinalizados)),
+                List.of("Tickets activos", String.valueOf(ticketsActivos)),
+                List.of("Pagos procesados", String.valueOf(pagos.size())));
+
+            return generarPdf("Resumen ejecutivo de reportes", subtitulo, headers, rows);
+            }
+
             public String construirNombreArchivoPdf(String prefijo) {
             String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP_FORMATTER);
             return prefijo + "_" + timestamp + ".pdf";
+            }
+
+            private String construirNombreArchivoEstandarImpl(String modulo, String tipoReporte, String extension) {
+            String moduloNormalizado = normalizarTexto(modulo).replaceAll("[^a-zA-Z0-9_\\-]", "_").toLowerCase(Locale.ROOT);
+            String tipoNormalizado = normalizarTexto(tipoReporte).replaceAll("[^a-zA-Z0-9_\\-]", "_").toLowerCase(Locale.ROOT);
+            String ext = normalizarTexto(extension).toLowerCase(Locale.ROOT);
+            if (moduloNormalizado.isBlank()) {
+                moduloNormalizado = "reportes";
+            }
+            if (tipoNormalizado.isBlank()) {
+                tipoNormalizado = "general";
+            }
+            if (ext.isBlank()) {
+                ext = "csv";
+            }
+            String timestamp = LocalDateTime.now().format(FILE_STANDARD_TIMESTAMP_FORMATTER);
+            return moduloNormalizado + "_" + tipoNormalizado + "_" + timestamp + "." + ext;
             }
 
         private ReporteSerieTemporalResponseDTO construirSeriePorHora(
@@ -851,6 +1706,232 @@ public class ReportesService {
                 return false;
             }
             return ESTADOS_OCUPADOS_ESPACIO.contains(espacio.getEstado().getNombre().trim().toUpperCase());
+        }
+
+        private boolean filtraUsuarioTicket(Ticket ticket, Long usuarioId) {
+            if (usuarioId == null) {
+                return true;
+            }
+            if (ticket == null || ticket.getCreadoPor() == null || ticket.getCreadoPor().getId() == null) {
+                return false;
+            }
+            return usuarioId.equals(ticket.getCreadoPor().getId());
+        }
+
+        private boolean filtraTipoVehiculoTicket(Ticket ticket, String tipoVehiculoNormalizado) {
+            if (tipoVehiculoNormalizado == null || tipoVehiculoNormalizado.isBlank()) {
+                return true;
+            }
+            if (ticket == null || ticket.getTipoVehiculo() == null || ticket.getTipoVehiculo().getNombre() == null) {
+                return false;
+            }
+            return tipoVehiculoNormalizado.equals(ticket.getTipoVehiculo().getNombre().trim().toUpperCase(Locale.ROOT));
+        }
+
+        private boolean filtraUsuarioPago(Pago pago, Long usuarioId) {
+            if (usuarioId == null) {
+                return true;
+            }
+            if (pago == null || pago.getProcesadoPor() == null || pago.getProcesadoPor().getId() == null) {
+                return false;
+            }
+            return usuarioId.equals(pago.getProcesadoPor().getId());
+        }
+
+        private boolean filtraTipoVehiculoPago(Pago pago, String tipoVehiculoNormalizado) {
+            if (tipoVehiculoNormalizado == null || tipoVehiculoNormalizado.isBlank()) {
+                return true;
+            }
+            if (pago == null || pago.getTicket() == null || pago.getTicket().getTipoVehiculo() == null
+                    || pago.getTicket().getTipoVehiculo().getNombre() == null) {
+                return false;
+            }
+            return tipoVehiculoNormalizado.equals(
+                    pago.getTicket().getTipoVehiculo().getNombre().trim().toUpperCase(Locale.ROOT));
+        }
+
+        private List<Pago> obtenerPagosEnRango(RangoFechas rango) {
+            return pagoRepository.findAll().stream()
+                    .filter(pago -> pago.getHoraPago() != null)
+                    .filter(pago -> !pago.getHoraPago().isBefore(rango.fechaDesde())
+                            && pago.getHoraPago().isBefore(rango.fechaHasta()))
+                    .toList();
+        }
+
+        private String normalizarGranularidad(String granularidad) {
+            String value = normalizarTexto(granularidad).toLowerCase(Locale.ROOT);
+            if (value.isBlank()) {
+                return "dia";
+            }
+            if (value.equals("dia") || value.equals("semana") || value.equals("mes")) {
+                return value;
+            }
+            throw new IllegalArgumentException("granularidad invalida. Use: dia, semana o mes");
+        }
+
+        private String construirEtiquetaPeriodo(LocalDateTime fechaHora, String granularidad) {
+            return switch (granularidad) {
+                case "mes" -> String.format("%04d-%02d", fechaHora.getYear(), fechaHora.getMonthValue());
+                case "semana" -> {
+                    WeekFields wf = WeekFields.ISO;
+                    int week = fechaHora.get(wf.weekOfWeekBasedYear());
+                    int year = fechaHora.get(wf.weekBasedYear());
+                    yield String.format("%04d-W%02d", year, week);
+                }
+                default -> fechaHora.toLocalDate().toString();
+            };
+        }
+
+        private String construirTextoPeriodo(RangoFechas rango) {
+            return formatDateTime(rango.fechaDesde()) + " a " + formatDateTime(rango.fechaHasta());
+        }
+
+        private String normalizarMetodoPago(String metodoPago) {
+            String value = normalizarTexto(metodoPago).toUpperCase(Locale.ROOT);
+            return value.isBlank() ? "SIN_METODO" : value;
+        }
+
+        private RangosComparacion resolverRangosComparacion(
+                LocalDateTime fechaDesde,
+                LocalDateTime fechaHasta,
+                String modoComparacion) {
+            RangoFechas actual = resolverRango(fechaDesde, fechaHasta);
+            String modo = normalizarModoComparacion(modoComparacion);
+
+            RangoFechas comparado;
+            if (MODO_COMPARACION_MISMO_PERIODO_ANIO_ANTERIOR.equals(modo)) {
+                comparado = new RangoFechas(
+                        actual.fechaDesde().minusYears(1),
+                        actual.fechaHasta().minusYears(1));
+            } else {
+                Duration duracion = Duration.between(actual.fechaDesde(), actual.fechaHasta());
+                if (duracion.isZero() || duracion.isNegative()) {
+                    duracion = Duration.ofDays(1);
+                }
+                LocalDateTime comparadoHasta = actual.fechaDesde();
+                LocalDateTime comparadoDesde = comparadoHasta.minus(duracion);
+                comparado = new RangoFechas(comparadoDesde, comparadoHasta);
+            }
+
+            return new RangosComparacion(actual, comparado);
+        }
+
+        private String normalizarModoComparacion(String modoComparacion) {
+            String value = normalizarTexto(modoComparacion)
+                    .replace("_", "")
+                    .replace("-", "")
+                    .toLowerCase(Locale.ROOT);
+            if (value.isBlank()) {
+                return MODO_COMPARACION_PERIODO_ANTERIOR;
+            }
+            if (MODO_COMPARACION_PERIODO_ANTERIOR.equals(value)
+                    || MODO_COMPARACION_MISMO_PERIODO_ANIO_ANTERIOR.equals(value)) {
+                return value;
+            }
+            throw new IllegalArgumentException("modoComparacion invalido. Use: periodoAnterior o mismoPeriodoAnioAnterior");
+        }
+
+        private List<Reserva> obtenerReservasProgramadasEnRango(RangoFechas rango) {
+            return reservaRepository.findAllByOrderByFechaCreacionDesc().stream()
+                    .filter(reserva -> reserva.getHoraInicio() != null)
+                    .filter(reserva -> !reserva.getHoraInicio().isBefore(rango.fechaDesde())
+                            && reserva.getHoraInicio().isBefore(rango.fechaHasta()))
+                    .toList();
+        }
+
+        private boolean existePagoAsociableAReserva(Reserva reserva, List<Pago> pagos) {
+            if (reserva == null || reserva.getHoraInicio() == null || reserva.getPlaca() == null || reserva.getEspacio() == null
+                    || reserva.getEspacio().getId() == null) {
+                return false;
+            }
+
+            LocalDateTime ventanaInicio = reserva.getHoraInicio().minusMinutes(30);
+            LocalDateTime ventanaFin = reserva.getHoraFin() != null
+                    ? reserva.getHoraFin().plusHours(6)
+                    : reserva.getHoraInicio().plusHours(24);
+
+            String placaReserva = normalizarTexto(reserva.getPlaca()).toUpperCase(Locale.ROOT);
+            Long espacioId = reserva.getEspacio().getId();
+
+            return pagos.stream()
+                    .map(Pago::getTicket)
+                    .filter(java.util.Objects::nonNull)
+                    .anyMatch(ticket -> {
+                        if (ticket.getHoraEntrada() == null || ticket.getPlaca() == null || ticket.getEspacio() == null
+                                || ticket.getEspacio().getId() == null) {
+                            return false;
+                        }
+                        String placaTicket = normalizarTexto(ticket.getPlaca()).toUpperCase(Locale.ROOT);
+                        boolean mismaPlaca = placaReserva.equals(placaTicket);
+                        boolean mismoEspacio = espacioId.equals(ticket.getEspacio().getId());
+                        boolean enVentana = !ticket.getHoraEntrada().isBefore(ventanaInicio)
+                                && !ticket.getHoraEntrada().isAfter(ventanaFin);
+                        return mismaPlaca && mismoEspacio && enVentana;
+                    });
+        }
+
+        private boolean esReservaNoShow(Reserva reserva) {
+            if (reserva == null || reserva.getHoraInicio() == null || reserva.getEstado() == null
+                    || reserva.getEstado().getNombre() == null) {
+                return false;
+            }
+
+            String estado = reserva.getEstado().getNombre().trim().toUpperCase(Locale.ROOT);
+            if (ESTADO_RESERVA_CANCELADA.equalsIgnoreCase(estado)) {
+                String motivo = normalizarTexto(reserva.getMotivoCancelacion()).toLowerCase(Locale.ROOT);
+                return motivo.contains("no show") || motivo.contains("noshow");
+            }
+
+            return ESTADO_RESERVA_PENDIENTE.equalsIgnoreCase(estado)
+                    && reserva.getHoraInicio().isBefore(LocalDateTime.now());
+        }
+
+        private BigDecimal calcularPorcentaje(long numerador, long denominador) {
+            if (denominador <= 0) {
+                return BigDecimal.ZERO;
+            }
+            return BigDecimal.valueOf(numerador)
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(denominador), 2, java.math.RoundingMode.HALF_UP);
+        }
+
+        private ReporteComparativoItemDTO construirComparativoItem(String etiqueta, BigDecimal actual, BigDecimal comparado) {
+            BigDecimal valorActual = actual == null ? BigDecimal.ZERO : actual;
+            BigDecimal valorComparado = comparado == null ? BigDecimal.ZERO : comparado;
+            BigDecimal variacionAbsoluta = valorActual.subtract(valorComparado);
+
+            BigDecimal variacionPorcentual;
+            if (valorComparado.compareTo(BigDecimal.ZERO) == 0) {
+                variacionPorcentual = valorActual.compareTo(BigDecimal.ZERO) == 0
+                        ? BigDecimal.ZERO
+                        : BigDecimal.valueOf(100);
+            } else {
+                variacionPorcentual = variacionAbsoluta
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(valorComparado, 2, java.math.RoundingMode.HALF_UP);
+            }
+
+            return new ReporteComparativoItemDTO(
+                    etiqueta,
+                    valorActual,
+                    valorComparado,
+                    variacionAbsoluta,
+                    variacionPorcentual);
+        }
+
+        private long calcularEstadiaMinutos(Ticket ticket, LocalDateTime referencia) {
+            if (ticket == null || ticket.getHoraEntrada() == null) {
+                return 0L;
+            }
+            LocalDateTime horaFin = ticket.getHoraSalida();
+            if (horaFin == null) {
+                horaFin = referencia;
+            }
+            if (horaFin == null) {
+                horaFin = LocalDateTime.of(ticket.getHoraEntrada().toLocalDate(), LocalTime.MAX);
+            }
+            long minutos = Duration.between(ticket.getHoraEntrada(), horaFin).toMinutes();
+            return Math.max(0L, minutos);
         }
 
         private String normalizarMotivo(String motivo) {
@@ -945,5 +2026,8 @@ public class ReportesService {
         }
 
         private record RangoFechas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        }
+
+        private record RangosComparacion(RangoFechas actual, RangoFechas comparado) {
         }
 }

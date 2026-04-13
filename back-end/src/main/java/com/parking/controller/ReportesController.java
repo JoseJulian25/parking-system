@@ -3,6 +3,7 @@ package com.parking.controller;
 import java.util.Map;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.parking.dto.ReporteSerieTemporalResponseDTO;
 import com.parking.dto.ReporteResumenKpiResponseDTO;
 import com.parking.dto.ReporteTablaResponseDTO;
+import com.parking.dto.ReporteComparativoResponseDTO;
+import com.parking.dto.ReporteFinancieroResponseDTO;
+import com.parking.dto.ReporteTopNResponseDTO;
 import com.parking.dto.ReporteConsultaPlacaResponseDTO;
 import com.parking.dto.ReportesBootstrapResponseDTO;
 import com.parking.service.ReportesService;
@@ -168,6 +172,131 @@ public class ReportesController {
         return ResponseEntity.ok(reportesService.obtenerConsultaPorCodigoReserva(codigoReserva));
     }
 
+    @GetMapping("/consultas/historial-cliente")
+    public ResponseEntity<ReporteTablaResponseDTO> historialConsolidadoCliente(
+            @RequestParam String placa) {
+        return ResponseEntity.ok(reportesService.obtenerHistorialConsolidadoCliente(placa));
+    }
+
+    @GetMapping("/consultas/trazabilidad-ticket/{codigoTicket}")
+    public ResponseEntity<ReporteTablaResponseDTO> trazabilidadTicket(
+            @PathVariable String codigoTicket) {
+        return ResponseEntity.ok(reportesService.obtenerTrazabilidadTicket(codigoTicket));
+    }
+
+    @GetMapping("/consultas/rango-montos")
+    public ResponseEntity<ReporteTablaResponseDTO> consultasPorRangoMontos(
+            @RequestParam(required = false) BigDecimal montoDesde,
+            @RequestParam(required = false) BigDecimal montoHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerConsultasPorRangoMontos(montoDesde, montoHasta, fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/financieros")
+    public ResponseEntity<Map<String, String>> estadoFinancieros() {
+        return ResponseEntity.ok(reportesService.obtenerEstadoSeccion("Financieros", "/reportes/financieros"));
+    }
+
+    @GetMapping("/financieros/ingresos-por-periodo")
+    public ResponseEntity<ReporteSerieTemporalResponseDTO> ingresosPorPeriodo(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) String granularidad) {
+        return ResponseEntity.ok(reportesService.obtenerIngresosPorPeriodo(fechaDesde, fechaHasta, granularidad));
+    }
+
+    @GetMapping("/financieros/promedios")
+    public ResponseEntity<ReporteFinancieroResponseDTO> promediosFinancieros(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerPromediosFinancieros(fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/financieros/ingresos-por-tipo-vehiculo")
+    public ResponseEntity<ReporteTablaResponseDTO> ingresosPorTipoVehiculo(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerIngresosPorTipoVehiculo(fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/financieros/ingresos-por-metodo-pago")
+    public ResponseEntity<ReporteTablaResponseDTO> ingresosPorMetodoPago(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerIngresosPorMetodoPago(fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/financieros/ranking-horas-pico")
+    public ResponseEntity<ReporteTopNResponseDTO> rankingHorasPicoPorIngreso(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Integer limite) {
+        return ResponseEntity.ok(reportesService.obtenerRankingHorasPicoPorIngreso(fechaDesde, fechaHasta, limite));
+    }
+
+    @GetMapping("/comparativos")
+    public ResponseEntity<Map<String, String>> estadoComparativos() {
+        return ResponseEntity.ok(reportesService.obtenerEstadoSeccion("Comparativos", "/reportes/comparativos"));
+    }
+
+    @GetMapping("/comparativos/entradas-salidas")
+    public ResponseEntity<ReporteComparativoResponseDTO> comparativoEntradasSalidas(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) String modoComparacion) {
+        return ResponseEntity.ok(reportesService.obtenerComparativoEntradasSalidas(fechaDesde, fechaHasta, modoComparacion));
+    }
+
+    @GetMapping("/comparativos/reservas-por-estado")
+    public ResponseEntity<ReporteComparativoResponseDTO> comparativoReservasPorEstado(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) String modoComparacion) {
+        return ResponseEntity.ok(reportesService.obtenerComparativoReservasPorEstado(fechaDesde, fechaHasta, modoComparacion));
+    }
+
+    @GetMapping("/comparativos/ocupacion-franja-horaria")
+    public ResponseEntity<ReporteComparativoResponseDTO> comparativoOcupacionPorFranja(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) String modoComparacion) {
+        return ResponseEntity.ok(reportesService.obtenerComparativoOcupacionPorFranja(fechaDesde, fechaHasta, modoComparacion));
+    }
+
+    @GetMapping("/eficiencia")
+    public ResponseEntity<Map<String, String>> estadoEficiencia() {
+        return ResponseEntity.ok(reportesService.obtenerEstadoSeccion("Eficiencia", "/reportes/eficiencia"));
+    }
+
+    @GetMapping("/eficiencia/tasa-conversion-reserva-ingreso")
+    public ResponseEntity<ReporteResumenKpiResponseDTO> tasaConversionReservaIngreso(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerTasaConversionReservaIngreso(fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/eficiencia/tasa-no-show")
+    public ResponseEntity<ReporteResumenKpiResponseDTO> tasaNoShow(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerTasaNoShowReservas(fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/eficiencia/cancelaciones-por-operador")
+    public ResponseEntity<ReporteTablaResponseDTO> cancelacionesPorOperador(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerCancelacionesPorOperador(fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/eficiencia/tiempo-promedio-ocupacion-por-tipo")
+    public ResponseEntity<ReporteTablaResponseDTO> tiempoPromedioOcupacionPorTipo(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+        return ResponseEntity.ok(reportesService.obtenerTiempoPromedioOcupacionPorTipo(fechaDesde, fechaHasta));
+    }
+
     @GetMapping("/export/csv/tickets")
     public ResponseEntity<ByteArrayResource> exportarTicketsCsv(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
@@ -209,6 +338,39 @@ public class ReportesController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
         String fileName = reportesService.construirNombreArchivoPdf("cancelaciones_reservas");
         byte[] data = reportesService.exportarCancelacionesConMotivoPdf(fechaDesde, fechaHasta);
+        return construirRespuestaPdf(fileName, data);
+    }
+
+    @GetMapping("/export/csv/operativos-avanzado")
+    public ResponseEntity<ByteArrayResource> exportarOperativosAvanzadoCsv(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Long usuarioId,
+            @RequestParam(required = false) String tipoVehiculo) {
+        String fileName = reportesService.construirNombreArchivoEstandar("reportes", "operativos_avanzado", "csv");
+        byte[] data = reportesService.exportarOperativosAvanzadoCsv(fechaDesde, fechaHasta, usuarioId, tipoVehiculo);
+        return construirRespuestaCsv(fileName, data);
+    }
+
+    @GetMapping("/export/csv/financieros-avanzado")
+    public ResponseEntity<ByteArrayResource> exportarFinancierosAvanzadoCsv(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Long usuarioId,
+            @RequestParam(required = false) String tipoVehiculo) {
+        String fileName = reportesService.construirNombreArchivoEstandar("reportes", "financieros_avanzado", "csv");
+        byte[] data = reportesService.exportarFinancierosAvanzadoCsv(fechaDesde, fechaHasta, usuarioId, tipoVehiculo);
+        return construirRespuestaCsv(fileName, data);
+    }
+
+    @GetMapping("/export/pdf/resumen-ejecutivo")
+    public ResponseEntity<ByteArrayResource> exportarResumenEjecutivoPdf(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Long usuarioId,
+            @RequestParam(required = false) String tipoVehiculo) {
+        String fileName = reportesService.construirNombreArchivoEstandar("reportes", "resumen_ejecutivo", "pdf");
+        byte[] data = reportesService.exportarResumenEjecutivoPdf(fechaDesde, fechaHasta, usuarioId, tipoVehiculo);
         return construirRespuestaPdf(fileName, data);
     }
 
