@@ -111,8 +111,10 @@ public class ReportesController {
     @GetMapping("/reservas/cancelaciones/detalle")
     public ResponseEntity<ReporteTablaResponseDTO> cancelacionesDetalle(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
-        return ResponseEntity.ok(reportesService.obtenerCancelacionesDetalle(fechaDesde, fechaHasta));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(reportesService.obtenerCancelacionesDetalle(fechaDesde, fechaHasta, page, size));
     }
 
     @GetMapping("/reservas/cancelaciones/conteo-por-motivo")
@@ -174,8 +176,10 @@ public class ReportesController {
 
     @GetMapping("/consultas/historial-cliente")
     public ResponseEntity<ReporteTablaResponseDTO> historialConsolidadoCliente(
-            @RequestParam String placa) {
-        return ResponseEntity.ok(reportesService.obtenerHistorialConsolidadoCliente(placa));
+            @RequestParam String placa,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(reportesService.obtenerHistorialConsolidadoCliente(placa, page, size));
     }
 
     @GetMapping("/consultas/trazabilidad-ticket/{codigoTicket}")
@@ -189,8 +193,10 @@ public class ReportesController {
             @RequestParam(required = false) BigDecimal montoDesde,
             @RequestParam(required = false) BigDecimal montoHasta,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
-        return ResponseEntity.ok(reportesService.obtenerConsultasPorRangoMontos(montoDesde, montoHasta, fechaDesde, fechaHasta));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(reportesService.obtenerConsultasPorRangoMontos(montoDesde, montoHasta, fechaDesde, fechaHasta, page, size));
     }
 
     @GetMapping("/financieros")

@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,6 +74,10 @@ public class ReportesService {
     private static final String MODO_COMPARACION_MISMO_PERIODO_ANIO_ANTERIOR = "mismoperiodoanioanterior";
     private static final Set<String> ESTADOS_OCUPADOS_ESPACIO = Set.of("OCUPADO", "RESERVADO");
     private static final String MONEDA_DEFAULT = "GTQ";
+    private static final int MAX_RANGE_DIAS = 92;
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 50;
+    private static final int MAX_SIZE = 200;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter FILE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
     private static final DateTimeFormatter FILE_STANDARD_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmm");
@@ -94,6 +99,7 @@ public class ReportesService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable("reportesBootstrap")
     public ReportesBootstrapResponseDTO obtenerBootstrap() {
         ReporteSeccionDTO operativos = new ReporteSeccionDTO();
         operativos.setNombre("Operativos");
@@ -337,6 +343,15 @@ public class ReportesService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerCancelacionesDetalle(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        return obtenerCancelacionesDetalle(fechaDesde, fechaHasta, null, null);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteTablaResponseDTO obtenerCancelacionesDetalle(
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            Integer page,
+            Integer size) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
         List<Reserva> canceladas = obtenerReservasCanceladasEnRango(rango);
 
@@ -366,7 +381,7 @@ public class ReportesService {
                 })
                 .toList();
 
-        return new ReporteTablaResponseDTO("Cancelaciones de reservas (detalle)", columnas, filas, (long) filas.size());
+        return paginarTabla("Cancelaciones de reservas (detalle)", columnas, filas, page, size);
     }
 
     @Transactional(readOnly = true)
@@ -394,6 +409,7 @@ public class ReportesService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable("reportesOcupacionGlobal")
     public ReporteResumenKpiResponseDTO obtenerOcupacionActualGlobal() {
     List<Espacio> espaciosActivos = espacioRepository.findAllByActivoTrueOrderByIdAsc();
     long totalActivos = espaciosActivos.size();
@@ -414,6 +430,7 @@ public class ReportesService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable("reportesOcupacionTipo")
     public ReporteTablaResponseDTO obtenerOcupacionPorTipoVehiculo() {
     List<Espacio> espaciosActivos = espacioRepository.findAllByActivoTrueOrderByIdAsc();
     Map<String, List<Espacio>> porTipo = espaciosActivos.stream()
@@ -447,6 +464,7 @@ public class ReportesService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable("reportesCapacidad")
     public ReporteResumenKpiResponseDTO obtenerCapacidadActivaInactiva() {
     long activos = espacioRepository.findAllByActivoTrueOrderByIdAsc().size();
     long inactivos = espacioRepository.findAllByActivoFalseOrderByIdAsc().size();
@@ -630,6 +648,11 @@ public class ReportesService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerHistorialConsolidadoCliente(String placa) {
+        return obtenerHistorialConsolidadoCliente(placa, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public ReporteTablaResponseDTO obtenerHistorialConsolidadoCliente(String placa, Integer page, Integer size) {
         String placaNormalizada = normalizarTexto(placa).toUpperCase(Locale.ROOT);
         if (placaNormalizada.isBlank()) {
             throw new IllegalArgumentException("La placa es obligatoria para consultar historial consolidado");
@@ -717,7 +740,7 @@ public class ReportesService {
         return new ReporteTablaResponseDTO(
                 "Historial consolidado por cliente (placa)",
                 columnas,
-                filas,
+            paginarFilas(filas, page, size),
                 (long) filas.size());
     }
 
@@ -798,6 +821,17 @@ public class ReportesService {
             BigDecimal montoHasta,
             LocalDateTime fechaDesde,
             LocalDateTime fechaHasta) {
+        return obtenerConsultasPorRangoMontos(montoDesde, montoHasta, fechaDesde, fechaHasta, null, null);
+        }
+
+        @Transactional(readOnly = true)
+        public ReporteTablaResponseDTO obtenerConsultasPorRangoMontos(
+            BigDecimal montoDesde,
+            BigDecimal montoHasta,
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            Integer page,
+            Integer size) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
 
         BigDecimal desde = montoDesde == null ? BigDecimal.ZERO : montoDesde;
@@ -850,7 +884,7 @@ public class ReportesService {
         return new ReporteTablaResponseDTO(
                 "Consulta por rango de montos",
                 columnas,
-                filas,
+            paginarFilas(filas, page, size),
                 (long) filas.size());
     }
 
@@ -1650,23 +1684,79 @@ public class ReportesService {
         }
 
         private RangoFechas resolverRango(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        RangoFechas rango;
         if (fechaDesde != null && fechaHasta != null) {
             if (fechaHasta.isBefore(fechaDesde)) {
             throw new IllegalArgumentException("fechaHasta no puede ser menor que fechaDesde");
             }
-            return new RangoFechas(fechaDesde, fechaHasta);
+            rango = new RangoFechas(fechaDesde, fechaHasta);
+            validarRangoMaximo(rango);
+            return rango;
         }
 
         if (fechaDesde != null) {
-            return new RangoFechas(fechaDesde, fechaDesde.plusDays(1));
+            rango = new RangoFechas(fechaDesde, fechaDesde.plusDays(1));
+            validarRangoMaximo(rango);
+            return rango;
         }
 
         if (fechaHasta != null) {
-            return new RangoFechas(fechaHasta.minusDays(1), fechaHasta);
+            rango = new RangoFechas(fechaHasta.minusDays(1), fechaHasta);
+            validarRangoMaximo(rango);
+            return rango;
         }
 
         LocalDate today = LocalDate.now();
-        return new RangoFechas(today.atStartOfDay(), today.plusDays(1).atStartOfDay());
+        rango = new RangoFechas(today.atStartOfDay(), today.plusDays(1).atStartOfDay());
+        validarRangoMaximo(rango);
+        return rango;
+        }
+
+        private void validarRangoMaximo(RangoFechas rango) {
+            long dias = Duration.between(rango.fechaDesde(), rango.fechaHasta()).toDays();
+            if (dias > MAX_RANGE_DIAS) {
+                throw new IllegalArgumentException("El rango maximo permitido es de " + MAX_RANGE_DIAS + " dias");
+            }
+        }
+
+        private ReporteTablaResponseDTO paginarTabla(
+                String titulo,
+                List<String> columnas,
+                List<ReporteTablaFilaDTO> filas,
+                Integer page,
+                Integer size) {
+            return new ReporteTablaResponseDTO(
+                    titulo,
+                    columnas,
+                    paginarFilas(filas, page, size),
+                    (long) filas.size());
+        }
+
+        private List<ReporteTablaFilaDTO> paginarFilas(List<ReporteTablaFilaDTO> filas, Integer page, Integer size) {
+            if (filas == null || filas.isEmpty()) {
+                return List.of();
+            }
+
+            int pageValue = page == null ? DEFAULT_PAGE : page;
+            int sizeValue = size == null ? DEFAULT_SIZE : size;
+            validarPaginacion(pageValue, sizeValue);
+
+            int fromIndex = pageValue * sizeValue;
+            if (fromIndex >= filas.size()) {
+                return List.of();
+            }
+
+            int toIndex = Math.min(fromIndex + sizeValue, filas.size());
+            return filas.subList(fromIndex, toIndex);
+        }
+
+        private void validarPaginacion(int page, int size) {
+            if (page < 0) {
+                throw new IllegalArgumentException("page no puede ser negativo");
+            }
+            if (size < 1 || size > MAX_SIZE) {
+                throw new IllegalArgumentException("size debe estar entre 1 y " + MAX_SIZE);
+            }
         }
 
         private String formatDateTime(LocalDateTime value) {
