@@ -21,8 +21,9 @@ import {
 } from "../../api/reportes";
 import { getUsuarios } from "../../api/usuarios";
 import { Button } from "../../components/ui/button";
-import { ReportesFiltrosBar } from "../../components/reportes/ReportesFiltrosBar";
+import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
 import { ReportesFetchState } from "../../components/reportes/ReportesFetchState";
+import { ReportesPageShell } from "../../components/reportes/ReportesPageShell";
 import {
   Select,
   SelectContent,
@@ -82,6 +83,7 @@ const triggerFileDownload = (blob, fileName) => {
 export const ReportesOperativosPage = () => {
   const [fechaDesde, setFechaDesde] = useState(startOfTodayInput());
   const [fechaHasta, setFechaHasta] = useState(nowInput());
+  const [granularidad, setGranularidad] = useState("dia");
   const [tipoVehiculo, setTipoVehiculo] = useState("TODOS");
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState("TODOS");
   const [loading, setLoading] = useState(false);
@@ -184,6 +186,7 @@ export const ReportesOperativosPage = () => {
   const limpiarFiltros = () => {
     setFechaDesde(startOfTodayInput());
     setFechaHasta(nowInput());
+    setGranularidad("dia");
     setTipoVehiculo("TODOS");
     setUsuarioSeleccionado("TODOS");
   };
@@ -204,35 +207,37 @@ export const ReportesOperativosPage = () => {
   };
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Reportes Operativos</h1>
-        <p className="text-sm text-muted-foreground">
-          Vista compacta de operación diaria: KPIs, entradas/salidas por hora y tickets activos.
-        </p>
-        <div className="pt-1">
-          <Button
-            size="sm"
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-            onClick={exportarCsvTickets}
-            disabled={loading}
-          >
-            Exportar CSV tickets
-          </Button>
-        </div>
-      </header>
-
-      <ReportesFiltrosBar
+    <ReportesPageShell
+      title="Reportes Operativos"
+      subtitle="Vista compacta de operación diaria: KPIs, entradas/salidas por hora y tickets activos."
+      actions={(
+        <Button
+          size="sm"
+          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          onClick={exportarCsvTickets}
+          disabled={loading}
+        >
+          Exportar CSV tickets
+        </Button>
+      )}
+    >
+      <ReportesContextBar
         fechaDesde={fechaDesde}
         fechaHasta={fechaHasta}
         onFechaDesdeChange={setFechaDesde}
         onFechaHastaChange={setFechaHasta}
+        granularidad={granularidad}
+        onGranularidadChange={setGranularidad}
+        usuarioSeleccionado={usuarioSeleccionado}
+        onUsuarioSeleccionadoChange={setUsuarioSeleccionado}
+        usuarios={usuarios}
         onLimpiar={limpiarFiltros}
         onActualizar={cargarDatos}
         loading={loading}
-        columnsClassName="md:grid-cols-5"
-        actionsSpanClassName=""
-      >
+      />
+
+      <div className="rounded-lg border bg-card p-3">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           <Select value={tipoVehiculo} onValueChange={setTipoVehiculo}>
             <SelectTrigger>
               <SelectValue placeholder="Tipo de vehiculo" />
@@ -243,21 +248,11 @@ export const ReportesOperativosPage = () => {
               <SelectItem value="MOTO">Moto</SelectItem>
             </SelectContent>
           </Select>
-
-          <Select value={usuarioSeleccionado} onValueChange={setUsuarioSeleccionado}>
-            <SelectTrigger>
-              <SelectValue placeholder="Usuario" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TODOS">Todos los usuarios</SelectItem>
-              {usuarios.map((usuario) => (
-                <SelectItem key={usuario.id} value={String(usuario.id)}>
-                  {usuario.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-      </ReportesFiltrosBar>
+          <div className="text-xs text-muted-foreground flex items-center">
+            Segmentación local: tipo de vehículo
+          </div>
+        </div>
+      </div>
 
       <ReportesFetchState
         loading={loading && !hasLoadedOnce}
@@ -355,6 +350,6 @@ export const ReportesOperativosPage = () => {
           </TableBody>
         </Table>
       </div>
-    </section>
+    </ReportesPageShell>
   );
 };

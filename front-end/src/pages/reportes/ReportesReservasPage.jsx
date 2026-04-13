@@ -19,9 +19,11 @@ import {
   getReservasPorEstadoReporte,
   getReservasProximasReporte,
 } from "../../api/reportes";
+import { getUsuarios } from "../../api/usuarios";
 import { Button } from "../../components/ui/button";
-import { ReportesFiltrosBar } from "../../components/reportes/ReportesFiltrosBar";
+import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
 import { ReportesFetchState } from "../../components/reportes/ReportesFetchState";
+import { ReportesPageShell } from "../../components/reportes/ReportesPageShell";
 import {
   Table,
   TableBody,
@@ -76,6 +78,9 @@ const KPI_ORDER = [
 export const ReportesReservasPage = () => {
   const [fechaDesde, setFechaDesde] = useState(startOfTodayInput());
   const [fechaHasta, setFechaHasta] = useState(nowInput());
+  const [granularidad, setGranularidad] = useState("dia");
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState("TODOS");
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -126,6 +131,20 @@ export const ReportesReservasPage = () => {
     cargarDatos();
   }, []);
 
+  useEffect(() => {
+    const cargarUsuarios = async () => {
+      try {
+        const data = await getUsuarios();
+        setUsuarios(Array.isArray(data) ? data : []);
+      } catch (error) {
+        const message = await getReportesErrorMessage(error, "No se pudo cargar la lista de usuarios");
+        toast.error(message);
+      }
+    };
+
+    cargarUsuarios();
+  }, []);
+
   const kpis = useMemo(() => {
     const byCode = new Map(kpisRaw.map((item) => [item.codigo, toNumber(item.valor)]));
     return KPI_ORDER.map((item) => ({
@@ -142,6 +161,8 @@ export const ReportesReservasPage = () => {
   const limpiarFiltros = () => {
     setFechaDesde(startOfTodayInput());
     setFechaHasta(nowInput());
+    setGranularidad("dia");
+    setUsuarioSeleccionado("TODOS");
   };
 
   const exportarCsvReservasActuales = async () => {
@@ -175,13 +196,11 @@ export const ReportesReservasPage = () => {
   };
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Reportes de Reservas</h1>
-        <p className="text-sm text-muted-foreground">
-          Vista compacta de estados, cancelaciones y reservas proximas.
-        </p>
-        <div className="pt-1 flex flex-wrap gap-2">
+    <ReportesPageShell
+      title="Reportes de Reservas"
+      subtitle="Vista compacta de estados, cancelaciones y reservas proximas."
+      actions={(
+        <>
           <Button
             size="sm"
             className="bg-emerald-600 text-white hover:bg-emerald-700"
@@ -198,14 +217,19 @@ export const ReportesReservasPage = () => {
           >
             Exportar CSV cancelaciones
           </Button>
-        </div>
-      </header>
-
-      <ReportesFiltrosBar
+        </>
+      )}
+    >
+      <ReportesContextBar
         fechaDesde={fechaDesde}
         fechaHasta={fechaHasta}
         onFechaDesdeChange={setFechaDesde}
         onFechaHastaChange={setFechaHasta}
+        granularidad={granularidad}
+        onGranularidadChange={setGranularidad}
+        usuarioSeleccionado={usuarioSeleccionado}
+        onUsuarioSeleccionadoChange={setUsuarioSeleccionado}
+        usuarios={usuarios}
         onLimpiar={limpiarFiltros}
         onActualizar={cargarDatos}
         loading={loading}
@@ -325,6 +349,6 @@ export const ReportesReservasPage = () => {
           </Table>
         </div>
       </div>
-    </section>
+    </ReportesPageShell>
   );
 };

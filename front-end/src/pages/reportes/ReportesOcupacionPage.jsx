@@ -18,8 +18,10 @@ import {
   getReportesErrorMessage,
   getUtilizacionPorEspacio,
 } from "../../api/reportes";
-import { ReportesFiltrosBar } from "../../components/reportes/ReportesFiltrosBar";
+import { getUsuarios } from "../../api/usuarios";
+import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
 import { ReportesFetchState } from "../../components/reportes/ReportesFetchState";
+import { ReportesPageShell } from "../../components/reportes/ReportesPageShell";
 import {
   Table,
   TableBody,
@@ -60,6 +62,9 @@ const parseKpisByCode = (kpis = []) => {
 export const ReportesOcupacionPage = () => {
   const [fechaDesde, setFechaDesde] = useState(startOfTodayInput());
   const [fechaHasta, setFechaHasta] = useState(nowInput());
+  const [granularidad, setGranularidad] = useState("dia");
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState("TODOS");
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -111,6 +116,20 @@ export const ReportesOcupacionPage = () => {
     cargarDatos();
   }, []);
 
+  useEffect(() => {
+    const cargarUsuarios = async () => {
+      try {
+        const data = await getUsuarios();
+        setUsuarios(Array.isArray(data) ? data : []);
+      } catch (error) {
+        const message = await getReportesErrorMessage(error, "No se pudo cargar la lista de usuarios");
+        toast.error(message);
+      }
+    };
+
+    cargarUsuarios();
+  }, []);
+
   const resumen = useMemo(() => {
     const globalMap = parseKpisByCode(ocupacionGlobalKpis);
     const capMap = parseKpisByCode(capacidadKpis);
@@ -147,22 +166,25 @@ export const ReportesOcupacionPage = () => {
   const limpiarFiltros = () => {
     setFechaDesde(startOfTodayInput());
     setFechaHasta(nowInput());
+    setGranularidad("dia");
+    setUsuarioSeleccionado("TODOS");
   };
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Reportes de Ocupacion</h1>
-        <p className="text-sm text-muted-foreground">
-          Vista compacta de ocupacion global, capacidad y utilizacion por espacio.
-        </p>
-      </header>
-
-      <ReportesFiltrosBar
+    <ReportesPageShell
+      title="Reportes de Ocupacion"
+      subtitle="Vista compacta de ocupacion global, capacidad y utilizacion por espacio."
+    >
+      <ReportesContextBar
         fechaDesde={fechaDesde}
         fechaHasta={fechaHasta}
         onFechaDesdeChange={setFechaDesde}
         onFechaHastaChange={setFechaHasta}
+        granularidad={granularidad}
+        onGranularidadChange={setGranularidad}
+        usuarioSeleccionado={usuarioSeleccionado}
+        onUsuarioSeleccionadoChange={setUsuarioSeleccionado}
+        usuarios={usuarios}
         onLimpiar={limpiarFiltros}
         onActualizar={cargarDatos}
         loading={loading}
@@ -282,6 +304,6 @@ export const ReportesOcupacionPage = () => {
           </TableBody>
         </Table>
       </div>
-    </section>
+    </ReportesPageShell>
   );
 };

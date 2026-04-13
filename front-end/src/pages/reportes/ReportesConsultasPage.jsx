@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Search, Loader2 } from "lucide-react";
 
@@ -8,6 +8,9 @@ import {
   consultarPorTicket,
   getReportesErrorMessage,
 } from "../../api/reportes";
+import { getUsuarios } from "../../api/usuarios";
+import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
+import { ReportesPageShell } from "../../components/reportes/ReportesPageShell";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -18,6 +21,23 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+
+const toLocalDateTimeInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const startOfTodayInput = () => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return toLocalDateTimeInput(now);
+};
+
+const nowInput = () => toLocalDateTimeInput(new Date());
 
 const renderTablaDinamica = (titulo, columnas = [], filas = []) => {
   return (
@@ -65,6 +85,12 @@ const renderTablaDinamica = (titulo, columnas = [], filas = []) => {
 };
 
 export const ReportesConsultasPage = () => {
+  const [fechaDesde, setFechaDesde] = useState(startOfTodayInput());
+  const [fechaHasta, setFechaHasta] = useState(nowInput());
+  const [granularidad, setGranularidad] = useState("dia");
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState("TODOS");
+  const [usuarios, setUsuarios] = useState([]);
+
   const [placa, setPlaca] = useState("");
   const [codigoTicket, setCodigoTicket] = useState("");
   const [codigoReserva, setCodigoReserva] = useState("");
@@ -76,6 +102,20 @@ export const ReportesConsultasPage = () => {
   const [resultadoPlaca, setResultadoPlaca] = useState(null);
   const [resultadoTicket, setResultadoTicket] = useState(null);
   const [resultadoReserva, setResultadoReserva] = useState(null);
+
+  useEffect(() => {
+    const cargarUsuarios = async () => {
+      try {
+        const data = await getUsuarios();
+        setUsuarios(Array.isArray(data) ? data : []);
+      } catch (error) {
+        const message = await getReportesErrorMessage(error, "No se pudo cargar la lista de usuarios");
+        toast.error(message);
+      }
+    };
+
+    cargarUsuarios();
+  }, []);
 
   const buscarPorPlaca = async () => {
     const value = placa.trim().toUpperCase();
@@ -134,14 +174,48 @@ export const ReportesConsultasPage = () => {
     }
   };
 
+  const limpiarFiltrosContexto = () => {
+    setFechaDesde(startOfTodayInput());
+    setFechaHasta(nowInput());
+    setGranularidad("dia");
+    setUsuarioSeleccionado("TODOS");
+  };
+
+  const actualizarContexto = async () => {
+    const tareas = [];
+    if (placa.trim()) tareas.push(buscarPorPlaca());
+    if (codigoTicket.trim()) tareas.push(buscarPorTicket());
+    if (codigoReserva.trim()) tareas.push(buscarPorReserva());
+
+    if (!tareas.length) {
+      toast("No hay consultas activas para actualizar");
+      return;
+    }
+
+    await Promise.all(tareas);
+  };
+
+  const loading = loadingPlaca || loadingTicket || loadingReserva;
+
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Consultas</h1>
-        <p className="text-sm text-muted-foreground">
-          Busquedas rapidas por placa, ticket y reserva con resultados en tablas compactas.
-        </p>
-      </header>
+    <ReportesPageShell
+      title="Consultas"
+      subtitle="Busquedas rapidas por placa, ticket y reserva con resultados en tablas compactas."
+    >
+      <ReportesContextBar
+        fechaDesde={fechaDesde}
+        fechaHasta={fechaHasta}
+        onFechaDesdeChange={setFechaDesde}
+        onFechaHastaChange={setFechaHasta}
+        granularidad={granularidad}
+        onGranularidadChange={setGranularidad}
+        usuarioSeleccionado={usuarioSeleccionado}
+        onUsuarioSeleccionadoChange={setUsuarioSeleccionado}
+        usuarios={usuarios}
+        onLimpiar={limpiarFiltrosContexto}
+        onActualizar={actualizarContexto}
+        loading={loading}
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="space-y-3 rounded-lg border bg-card p-3">
@@ -218,6 +292,6 @@ export const ReportesConsultasPage = () => {
             )}
         </div>
       </div>
-    </section>
+    </ReportesPageShell>
   );
 };
