@@ -5,8 +5,8 @@ import {
   ChevronDown,
   DollarSign,
   FileSearch,
-  History,
   LayoutDashboard,
+  Layers3,
   LogIn,
   LogOut,
   Menu,
@@ -24,7 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 
 const menuItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "operador"] },
-  { path: "/entrada", label: "Entradas", icon: LogIn, roles: ["admin", "operador"] },
+  { path: "/entrada", label: "Entradas y Salidas", icon: LogIn, roles: ["admin", "operador"] },
   { path: "/reservas", label: "Reservas", icon: Calendar, roles: ["admin", "operador"] },
   {
     path: "/reportes",
@@ -39,7 +39,6 @@ const menuItems = [
       { path: "/reportes/consultas", label: "Consultas", icon: FileSearch }
     ]
   },
-  { path: "/historial", label: "Historial", icon: History, roles: ["admin", "operador"] },
   {
     path: "/configuracion",
     label: "Configuracion",
@@ -47,7 +46,8 @@ const menuItems = [
     roles: ["admin"],
     children: [
       { path: "/configuracion/empresa", label: "Informacion de la empresa", icon: Building2 },
-      { path: "/configuracion/tarifas", label: "Tarifas", icon: DollarSign }
+      { path: "/configuracion/tarifas", label: "Tarifas", icon: DollarSign },
+      { path: "/configuracion/espacios", label: "Espacios", icon: Layers3 }
     ]
   },
   { path: "/usuarios", label: "Usuarios", icon: Users, roles: ["admin"] },

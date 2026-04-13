@@ -1,20 +1,21 @@
 import { Building2, DollarSign } from "lucide-react";
 
 import { Card, CardContent } from "../components/ui/card";
+import { EspaciosSection } from "../components/configuracion/EspaciosSection";
 import { GeneralSection } from "../components/configuracion/GeneralSection";
 import { TarifasSection } from "../components/configuracion/TarifasSection";
 import { useConfiguracionPage } from "../hooks/configuracion/useConfiguracionPage";
 
 export const ConfiguracionPage = ({ initialTab = "general" }) => {
   const { loading, empresa, tarifas } = useConfiguracionPage();
-  const activeTab = initialTab === "tarifas" ? "tarifas" : "general";
+  const activeTab = initialTab === "tarifas" || initialTab === "espacios" ? initialTab : "general";
 
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-3xl font-bold mb-2">Configuración del Sistema</h1>
         <p className="text-muted-foreground">
-          Configure los parámetros generales y tarifas del parqueo
+          Configure los parametros generales, tarifas y capacidad de espacios
         </p>
       </div>
 
@@ -57,6 +58,8 @@ export const ConfiguracionPage = ({ initialTab = "general" }) => {
               calcularEjemplo={tarifas.calcularEjemplo}
             />
           )}
+
+          {activeTab === "espacios" && <EspaciosSection />}
         </div>
       )}
     </div>

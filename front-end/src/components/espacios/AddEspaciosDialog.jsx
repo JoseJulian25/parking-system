@@ -37,8 +37,8 @@ export default function AddEspaciosDialog({ open, onClose, onSave }) {
       setLoading(true);
 
       await onSave({
-        carros: carrosNum,
-        motos: motosNum,
+        cantidadCarros: carrosNum,
+        cantidadMotos: motosNum,
       });
 
       setCarros(0);
