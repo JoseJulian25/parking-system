@@ -32,13 +32,19 @@ export const ReservasPage = () => {
 
       <Tabs defaultValue="crear" className="space-y-4">
 
-        <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid">
+        <TabsList className="grid w-full grid-cols-2 border border-primary/20 bg-primary/5 md:w-auto md:inline-grid">
 
-          <TabsTrigger value="crear">
+          <TabsTrigger
+            value="crear"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+          >
             Crear Reserva
           </TabsTrigger>
 
-          <TabsTrigger value="activas">
+          <TabsTrigger
+            value="activas"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+          >
             Gestionar Reservas
           </TabsTrigger>
 

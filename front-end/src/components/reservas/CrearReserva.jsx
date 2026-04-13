@@ -8,7 +8,9 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { cn } from "@/lib/utils";
 import { getEspacios } from "@/api/espacios";
 
 export default function CrearReserva({ onSuccess }) {
@@ -175,204 +177,191 @@ export default function CrearReserva({ onSuccess }) {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Espacios para Carros
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {carrosDisponibles}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              disponibles
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Espacios para Motos
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {motosDisponibles}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              disponibles
-            </p>
-          </CardContent>
-        </Card>
-
+      <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground">
+          Disponibilidad:
+        </span>
+        <Badge variant="secondary" className="gap-1">
+          Carros <span className="font-bold">{carrosDisponibles}</span>
+        </Badge>
+        <Badge variant="secondary" className="gap-1">
+          Motos <span className="font-bold">{motosDisponibles}</span>
+        </Badge>
+        <Badge variant="outline" className="gap-1">
+          Total libres <span className="font-bold">{espaciosLibres.length}</span>
+        </Badge>
       </div>
 
-      <Card>
-
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">
-            Nueva Reserva
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent>
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Nombre</Label>
-                <Input
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Nombre"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Apellido</Label>
-                <Input
-                  value={apellido}
-                  onChange={(e) => setApellido(e.target.value)}
-                  placeholder="Apellido"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="cliente@email.com"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Telefono</Label>
-                <Input
-                  type="tel"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="809-555-1234"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Tipo de Vehículo</Label>
-
-              <div className="flex gap-6">
-
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value="CARRO"
-                    checked={tipoVehiculo === "CARRO"}
-                    onChange={(e) =>
-                      setTipoVehiculo(e.target.value)
-                    }
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
+            <div className="rounded-md border p-3 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Datos del cliente
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Nombre</Label>
+                  <Input
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder="Nombre"
+                    required
                   />
-                  Carro
-                </label>
+                </div>
 
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value="MOTO"
-                    checked={tipoVehiculo === "MOTO"}
-                    onChange={(e) =>
-                      setTipoVehiculo(e.target.value)
-                    }
+                <div>
+                  <Label>Apellido</Label>
+                  <Input
+                    value={apellido}
+                    onChange={(e) => setApellido(e.target.value)}
+                    placeholder="Apellido"
+                    required
                   />
-                  Moto
-                </label>
+                </div>
 
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="cliente@email.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label>Telefono</Label>
+                  <Input
+                    type="tel"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    placeholder="809-555-1234"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Placa del Vehículo</Label>
-                <Input
-                  value={placa}
-                  onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-                  placeholder="A123456"
-                  required
-                />
+            <div className="rounded-md border p-3 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Vehiculo y parqueo
+              </p>
+              <div className="space-y-2">
+                <Label>Tipo de Vehiculo</Label>
+                <div className="flex gap-2">
+                  <label
+                    className={cn(
+                      "flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors",
+                      tipoVehiculo === "CARRO"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      className="sr-only"
+                      value="CARRO"
+                      checked={tipoVehiculo === "CARRO"}
+                      onChange={(e) => setTipoVehiculo(e.target.value)}
+                    />
+                    Carro
+                  </label>
+
+                  <label
+                    className={cn(
+                      "flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors",
+                      tipoVehiculo === "MOTO"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      className="sr-only"
+                      value="MOTO"
+                      checked={tipoVehiculo === "MOTO"}
+                      onChange={(e) => setTipoVehiculo(e.target.value)}
+                    />
+                    Moto
+                  </label>
+                </div>
               </div>
 
-              <div>
-                <Label>Seleccionar Parqueo</Label>
-                <select
-                  className="w-full border rounded-md p-2 h-10 text-sm"
-                  value={espacioId}
-                  onChange={(e) => setEspacioId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccione un parqueo</option>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Placa del Vehículo</Label>
+                  <Input
+                    value={placa}
+                    onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+                    placeholder="A123456"
+                    required
+                  />
+                </div>
 
-                  {espaciosFiltrados.map((espacio) => (
-                    <option key={espacio.id} value={espacio.id}>
-                      {espacio.codigoEspacio} - {espacio.tipoVehiculo}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {espaciosFiltrados.length} espacios disponibles para {tipoVehiculo.toLowerCase()}
-                </p>
+                <div>
+                  <Label>Seleccionar Parqueo</Label>
+                  <select
+                    className="w-full h-10 rounded-md border bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={espacioId}
+                    onChange={(e) => setEspacioId(e.target.value)}
+                    required
+                  >
+                    <option value="">Seleccione un parqueo</option>
+
+                    {espaciosFiltrados.map((espacio) => (
+                      <option key={espacio.id} value={espacio.id}>
+                        {espacio.codigoEspacio} - {espacio.tipoVehiculo}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {espaciosFiltrados.length} espacios disponibles para {tipoVehiculo.toLowerCase()}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Fecha Reserva</Label>
-                <Input
-                  type="date"
-                  value={fechaReserva}
-                  onChange={(e) => setFechaReserva(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                  required
-                />
-              </div>
+            <div className="rounded-md border p-3 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Programacion
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Fecha Reserva</Label>
+                  <Input
+                    type="date"
+                    value={fechaReserva}
+                    onChange={(e) => setFechaReserva(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    required
+                  />
+                </div>
 
-              <div>
-                <Label>Hora Inicio</Label>
-                <Input
-                  type="time"
-                  value={horaInicio}
-                  onChange={(e) => setHoraInicio(e.target.value)}
-                  required
-                />
+                <div>
+                  <Label>Hora Inicio</Label>
+                  <Input
+                    type="time"
+                    value={horaInicio}
+                    onChange={(e) => setHoraInicio(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
             </div>
 
             <div className="flex justify-end">
               <Button
-                className="min-w-40"
+                className="min-w-40 bg-primary text-primary-foreground hover:bg-primary/90"
                 disabled={loading || espaciosFiltrados.length === 0}
               >
                 {loading ? "Creando..." : "Crear Reserva"}
               </Button>
             </div>
 
-          </form>
-
-        </CardContent>
-
-      </Card>
+      </form>
 
     </div>
 
