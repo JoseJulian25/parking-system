@@ -151,8 +151,9 @@ public class ReservaService {
                 .orElseThrow(() -> new NoSuchElementException("Estado de reserva CANCELADA no encontrado"));
 
         reserva.setEstado(estadoCancelada);
-    reserva.setMotivoCancelacion(normalize(dto.getMotivoCancelacion()));
-    reserva.setHoraFin(LocalDateTime.now());
+        reserva.setMotivoCancelacion(normalize(dto.getMotivoCancelacion()));
+        reserva.setHoraFin(LocalDateTime.now());
+        reserva.setCanceladoPor(obtenerUsuarioAutenticado());
         Reserva actualizada = reservaRepository.save(reserva);
 
         actualizarEstadoEspacio(actualizada, ESTADO_ESPACIO_LIBRE);
@@ -196,6 +197,7 @@ public class ReservaService {
                 reserva.getHoraInicio(),
                 reserva.getHoraFin(),
                 reserva.getMotivoCancelacion(),
+                reserva.getCanceladoPor() == null ? null : reserva.getCanceladoPor().getUsername(),
                 reserva.getClienteNombreCompleto(),
                 reserva.getClienteTelefono(),
                 reserva.getClienteEmail(),

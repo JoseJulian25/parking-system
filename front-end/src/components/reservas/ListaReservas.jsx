@@ -338,7 +338,12 @@ export default function ListaReservas({ refresh }) {
                     <div>{formatDateTime(reserva.horaInicio)}</div>
                     <div className="text-muted-foreground">{formatDateTime(reserva.horaFin)}</div>
                     {(reserva.estado || "").toUpperCase() === "CANCELADA" && reserva.motivoCancelacion && (
-                      <div className="text-rose-700 mt-1">Motivo: {reserva.motivoCancelacion}</div>
+                      <div className="mt-1 space-y-1">
+                        <div className="text-rose-700">Motivo: {reserva.motivoCancelacion}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Cancelado por: {reserva.canceladoPor || "SIN_USUARIO"}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </TableCell>

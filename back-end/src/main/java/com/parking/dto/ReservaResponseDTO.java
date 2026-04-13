@@ -21,6 +21,7 @@ public class ReservaResponseDTO {
     private LocalDateTime horaInicio;
     private LocalDateTime horaFin;
     private String motivoCancelacion;
+    private String canceladoPor;
     private String clienteNombreCompleto;
     private String clienteTelefono;
     private String clienteEmail;

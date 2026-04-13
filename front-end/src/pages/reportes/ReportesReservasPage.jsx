@@ -256,13 +256,14 @@ export const ReportesReservasPage = () => {
                 <TableHead className="h-9 px-2">Reserva</TableHead>
                 <TableHead className="h-9 px-2">Placa</TableHead>
                 <TableHead className="h-9 px-2">Espacio</TableHead>
+                <TableHead className="h-9 px-2">Cancelado por</TableHead>
                 <TableHead className="h-9 px-2">Motivo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!cancelaciones.length ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-6 text-center text-xs text-muted-foreground">
+                  <TableCell colSpan={5} className="py-6 text-center text-xs text-muted-foreground">
                     No hay cancelaciones en el rango seleccionado.
                   </TableCell>
                 </TableRow>
@@ -274,6 +275,7 @@ export const ReportesReservasPage = () => {
                       <TableCell className="px-2 py-2 font-medium">{c.codigoReserva || "-"}</TableCell>
                       <TableCell className="px-2 py-2">{c.placa || "-"}</TableCell>
                       <TableCell className="px-2 py-2">{c.codigoEspacio || "-"}</TableCell>
+                      <TableCell className="px-2 py-2">{c.canceladoPor || "SIN_USUARIO"}</TableCell>
                       <TableCell className="px-2 py-2 max-w-[220px] truncate" title={c.motivoCancelacion || "-"}>
                         {c.motivoCancelacion || "-"}
                       </TableCell>

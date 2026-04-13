@@ -84,6 +84,10 @@ public class Reserva {
     @ManyToOne
     @JoinColumn(name = "creado_por")
     private Usuario creadoPor;
+
+    @ManyToOne
+    @JoinColumn(name = "cancelado_por")
+    private Usuario canceladoPor;
     
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)
