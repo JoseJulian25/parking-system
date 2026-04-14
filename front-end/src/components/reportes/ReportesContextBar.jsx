@@ -17,6 +17,7 @@ export const ReportesContextBar = ({
   onFechaDesdeChange,
   onFechaHastaChange,
   showUsuarioFilter = true,
+  showGranularidadFilter = true,
   usuarioSeleccionado = "TODOS",
   onUsuarioSeleccionadoChange,
   usuarios = [],
@@ -27,7 +28,8 @@ export const ReportesContextBar = ({
   onActualizar,
   loading = false,
 }) => {
-  const gridColsClass = showUsuarioFilter ? "md:grid-cols-6" : "md:grid-cols-5";
+  const midFilters = (showUsuarioFilter ? 1 : 0) + (showGranularidadFilter ? 1 : 0);
+  const gridColsClass = `md:grid-cols-${2 + midFilters + 2}`;
 
   return (
     <div className="rounded-lg border bg-card p-3">
@@ -51,18 +53,20 @@ export const ReportesContextBar = ({
           </Select>
         )}
 
-        <Select value={granularidad} onValueChange={onGranularidadChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Granularidad" />
-          </SelectTrigger>
-          <SelectContent>
-            {granularidades.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {showGranularidadFilter && (
+          <Select value={granularidad} onValueChange={onGranularidadChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Granularidad" />
+            </SelectTrigger>
+            <SelectContent>
+              {granularidades.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <div className="md:col-span-2 flex items-center justify-end gap-2">
           <Button size="sm" variant="outline" onClick={onLimpiar} disabled={loading}>

@@ -1,19 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Search, Loader2 } from "lucide-react";
+import { Loader2, RefreshCw, Search } from "lucide-react";
 
 import {
-  getConsultasPorRangoMontos,
-  getHistorialConsolidadoCliente,
-  getTrazabilidadTicket,
+  consultarPagoPorTicket,
+  consultarPorPlaca,
   consultarPorReserva,
+  consultarPorTicket,
+  getConsultasPagosPorFecha,
+  getConsultasReservasPorFecha,
+  getConsultasTicketsPorFecha,
+  getConsultasVehiculosPorFecha,
   getReportesErrorMessage,
 } from "../../api/reportes";
-import { getUsuarios } from "../../api/usuarios";
 import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
 import { ReportesPageShell } from "../../components/reportes/ReportesPageShell";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -45,8 +49,7 @@ const toApiLocalDateTime = (value) => {
   return value.length === 16 ? `${value}:00` : value;
 };
 
-const HISTORIAL_PAGE_SIZE = 20;
-const MONTOS_PAGE_SIZE = 20;
+const PAGE_SIZE = 20;
 
 const getTotalRegistros = (response) => {
   const total = Number(response?.totalRegistros ?? 0);
@@ -101,376 +104,356 @@ const renderTablaDinamica = (titulo, columnas = [], filas = []) => {
 export const ReportesConsultasPage = () => {
   const [fechaDesde, setFechaDesde] = useState(startOfTodayInput());
   const [fechaHasta, setFechaHasta] = useState(nowInput());
-  const [granularidad, setGranularidad] = useState("dia");
-  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState("TODOS");
-  const [usuarios, setUsuarios] = useState([]);
+  const [seccionActiva, setSeccionActiva] = useState("tickets");
 
-  const [placa, setPlaca] = useState("");
+  const [ticketsPage, setTicketsPage] = useState(0);
+  const [pagosPage, setPagosPage] = useState(0);
+  const [reservasPage, setReservasPage] = useState(0);
+  const [vehiculosPage, setVehiculosPage] = useState(0);
+
+  const [ticketsListado, setTicketsListado] = useState(null);
+  const [pagosListado, setPagosListado] = useState(null);
+  const [reservasListado, setReservasListado] = useState(null);
+  const [vehiculosListado, setVehiculosListado] = useState(null);
+
   const [codigoTicket, setCodigoTicket] = useState("");
+  const [ticketDetalle, setTicketDetalle] = useState(null);
+
+  const [codigoPagoTicket, setCodigoPagoTicket] = useState("");
+  const [pagoDetalle, setPagoDetalle] = useState(null);
+
   const [codigoReserva, setCodigoReserva] = useState("");
-  const [montoDesde, setMontoDesde] = useState("");
-  const [montoHasta, setMontoHasta] = useState("");
+  const [reservaDetalle, setReservaDetalle] = useState(null);
 
-  const [loadingHistorial, setLoadingHistorial] = useState(false);
-  const [loadingTicket, setLoadingTicket] = useState(false);
-  const [loadingReserva, setLoadingReserva] = useState(false);
-  const [loadingMontos, setLoadingMontos] = useState(false);
+  const [placaVehiculo, setPlacaVehiculo] = useState("");
+  const [vehiculoDetalle, setVehiculoDetalle] = useState(null);
 
-  const [resultadoHistorial, setResultadoHistorial] = useState(null);
-  const [resultadoTicket, setResultadoTicket] = useState(null);
-  const [resultadoReserva, setResultadoReserva] = useState(null);
-  const [resultadoMontos, setResultadoMontos] = useState(null);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [loadingPagos, setLoadingPagos] = useState(false);
+  const [loadingReservas, setLoadingReservas] = useState(false);
+  const [loadingVehiculos, setLoadingVehiculos] = useState(false);
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
 
-  const [historialPage, setHistorialPage] = useState(0);
-  const [montosPage, setMontosPage] = useState(0);
+  const baseParams = useMemo(
+    () => ({
+      fechaDesde: toApiLocalDateTime(fechaDesde),
+      fechaHasta: toApiLocalDateTime(fechaHasta),
+    }),
+    [fechaDesde, fechaHasta]
+  );
 
-  useEffect(() => {
-    const cargarUsuarios = async () => {
-      try {
-        const data = await getUsuarios();
-        setUsuarios(Array.isArray(data) ? data : []);
-      } catch (error) {
-        const message = await getReportesErrorMessage(error, "No se pudo cargar la lista de usuarios");
-        toast.error(message);
-      }
-    };
-
-    cargarUsuarios();
-  }, []);
-
-  const buscarHistorialPorPlaca = async (targetPage = 0) => {
-    const value = placa.trim().toUpperCase();
-    if (!value) {
-      toast.error("Ingresa una placa para consultar");
-      return;
-    }
-
+  const cargarTicketsListado = async (page = 0) => {
     try {
-      setLoadingHistorial(true);
-      const data = await getHistorialConsolidadoCliente({
-        placa: value,
-        page: targetPage,
-        size: HISTORIAL_PAGE_SIZE,
-      });
-      setResultadoHistorial(data);
-      setHistorialPage(targetPage);
+      setLoadingTickets(true);
+      const data = await getConsultasTicketsPorFecha({ ...baseParams, page, size: PAGE_SIZE });
+      setTicketsListado(data);
+      setTicketsPage(page);
     } catch (error) {
-      const message = await getReportesErrorMessage(error, "No se pudo consultar historial por placa");
-      toast.error(message);
+      toast.error(await getReportesErrorMessage(error, "No se pudo cargar listado de tickets"));
     } finally {
-      setLoadingHistorial(false);
+      setLoadingTickets(false);
     }
   };
 
-  const buscarTrazabilidadTicket = async () => {
+  const cargarPagosListado = async (page = 0) => {
+    try {
+      setLoadingPagos(true);
+      const data = await getConsultasPagosPorFecha({ ...baseParams, page, size: PAGE_SIZE });
+      setPagosListado(data);
+      setPagosPage(page);
+    } catch (error) {
+      toast.error(await getReportesErrorMessage(error, "No se pudo cargar listado de pagos"));
+    } finally {
+      setLoadingPagos(false);
+    }
+  };
+
+  const cargarReservasListado = async (page = 0) => {
+    try {
+      setLoadingReservas(true);
+      const data = await getConsultasReservasPorFecha({ ...baseParams, page, size: PAGE_SIZE });
+      setReservasListado(data);
+      setReservasPage(page);
+    } catch (error) {
+      toast.error(await getReportesErrorMessage(error, "No se pudo cargar listado de reservas"));
+    } finally {
+      setLoadingReservas(false);
+    }
+  };
+
+  const cargarVehiculosListado = async (page = 0) => {
+    try {
+      setLoadingVehiculos(true);
+      const data = await getConsultasVehiculosPorFecha({ ...baseParams, page, size: PAGE_SIZE });
+      setVehiculosListado(data);
+      setVehiculosPage(page);
+    } catch (error) {
+      toast.error(await getReportesErrorMessage(error, "No se pudo cargar listado de vehiculos"));
+    } finally {
+      setLoadingVehiculos(false);
+    }
+  };
+
+  const buscarTicketPorCodigo = async () => {
     const value = codigoTicket.trim();
     if (!value) {
       toast.error("Ingresa un codigo de ticket");
       return;
     }
-
     try {
-      setLoadingTicket(true);
-      const data = await getTrazabilidadTicket(value);
-      setResultadoTicket(data);
+      setLoadingDetalle(true);
+      setTicketDetalle(await consultarPorTicket(value));
     } catch (error) {
-      const message = await getReportesErrorMessage(error, "No se pudo consultar trazabilidad de ticket");
-      toast.error(message);
+      toast.error(await getReportesErrorMessage(error, "No se pudo consultar ticket por codigo"));
     } finally {
-      setLoadingTicket(false);
+      setLoadingDetalle(false);
     }
   };
 
-  const buscarPorReserva = async () => {
+  const buscarPagoPorCodigo = async () => {
+    const value = codigoPagoTicket.trim();
+    if (!value) {
+      toast.error("Ingresa el codigo del ticket para consultar pago");
+      return;
+    }
+    try {
+      setLoadingDetalle(true);
+      setPagoDetalle(await consultarPagoPorTicket(value));
+    } catch (error) {
+      toast.error(await getReportesErrorMessage(error, "No se pudo consultar pago por codigo"));
+    } finally {
+      setLoadingDetalle(false);
+    }
+  };
+
+  const buscarReservaPorCodigo = async () => {
     const value = codigoReserva.trim();
     if (!value) {
       toast.error("Ingresa un codigo de reserva");
       return;
     }
-
     try {
-      setLoadingReserva(true);
-      const data = await consultarPorReserva(value);
-      setResultadoReserva(data);
+      setLoadingDetalle(true);
+      setReservaDetalle(await consultarPorReserva(value));
     } catch (error) {
-      const message = await getReportesErrorMessage(error, "No se pudo consultar por reserva");
-      toast.error(message);
+      toast.error(await getReportesErrorMessage(error, "No se pudo consultar reserva por codigo"));
     } finally {
-      setLoadingReserva(false);
+      setLoadingDetalle(false);
     }
   };
 
-  const buscarPorRangoMontos = async (targetPage = 0) => {
+  const buscarVehiculoPorCodigo = async () => {
+    const value = placaVehiculo.trim().toUpperCase();
+    if (!value) {
+      toast.error("Ingresa la placa del vehiculo");
+      return;
+    }
     try {
-      setLoadingMontos(true);
-      const data = await getConsultasPorRangoMontos({
-        montoDesde: montoDesde.trim() ? Number(montoDesde) : undefined,
-        montoHasta: montoHasta.trim() ? Number(montoHasta) : undefined,
-        fechaDesde: toApiLocalDateTime(fechaDesde),
-        fechaHasta: toApiLocalDateTime(fechaHasta),
-        page: targetPage,
-        size: MONTOS_PAGE_SIZE,
-      });
-      setResultadoMontos(data);
-      setMontosPage(targetPage);
+      setLoadingDetalle(true);
+      setVehiculoDetalle(await consultarPorPlaca(value));
     } catch (error) {
-      const message = await getReportesErrorMessage(error, "No se pudo consultar por rango de montos");
-      toast.error(message);
+      toast.error(await getReportesErrorMessage(error, "No se pudo consultar vehiculo por placa"));
     } finally {
-      setLoadingMontos(false);
+      setLoadingDetalle(false);
     }
   };
 
-  const construirTimelineReserva = () => {
-    const row = resultadoReserva?.filas?.[0]?.columnas || null;
-    if (!row) return [];
-
-    const eventos = [];
-    eventos.push({
-      fechaEvento: row.horaInicio || "-",
-      tipoEvento: "RESERVA_INICIO",
-      codigo: row.codigoReserva || "-",
-      estado: row.estado || "-",
-      detalle: `Espacio: ${row.codigoEspacio || "-"} | Tipo: ${row.tipoVehiculo || "-"}`,
-      monto: "-",
-    });
-
-    if (row.horaFin && row.horaFin !== "-") {
-      eventos.push({
-        fechaEvento: row.horaFin,
-        tipoEvento: "RESERVA_FIN",
-        codigo: row.codigoReserva || "-",
-        estado: row.estado || "-",
-        detalle: `Motivo cancelacion: ${row.motivoCancelacion || "-"}`,
-        monto: "-",
-      });
-    }
-
-    return eventos;
+  const cargarSeccionActiva = async () => {
+    if (seccionActiva === "tickets") return cargarTicketsListado(ticketsPage);
+    if (seccionActiva === "pagos") return cargarPagosListado(pagosPage);
+    if (seccionActiva === "reservas") return cargarReservasListado(reservasPage);
+    return cargarVehiculosListado(vehiculosPage);
   };
 
   const limpiarFiltrosContexto = () => {
     setFechaDesde(startOfTodayInput());
     setFechaHasta(nowInput());
-    setGranularidad("dia");
-    setUsuarioSeleccionado("TODOS");
   };
 
-  const actualizarContexto = async () => {
-    const tareas = [];
-    if (placa.trim()) tareas.push(buscarHistorialPorPlaca(historialPage));
-    if (codigoTicket.trim()) tareas.push(buscarTrazabilidadTicket());
-    if (codigoReserva.trim()) tareas.push(buscarPorReserva());
-    if (montoDesde.trim() || montoHasta.trim() || resultadoMontos) {
-      tareas.push(buscarPorRangoMontos(montosPage));
-    }
+  useEffect(() => {
+    cargarSeccionActiva();
+  }, [seccionActiva]);
 
-    if (!tareas.length) {
-      toast("No hay consultas activas para actualizar");
-      return;
-    }
+  const loading = loadingTickets || loadingPagos || loadingReservas || loadingVehiculos || loadingDetalle;
 
-    await Promise.all(tareas);
+  const renderPagination = (page, total, onPrev, onNext, loadingSection) => {
+    const canPrev = page > 0;
+    const canNext = (page + 1) * PAGE_SIZE < Number(total || 0);
+
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={onPrev} disabled={!canPrev || loadingSection}>
+          Anterior
+        </Button>
+        <Button size="sm" variant="outline" onClick={onNext} disabled={!canNext || loadingSection}>
+          Siguiente
+        </Button>
+      </div>
+    );
   };
-
-  const loading = loadingHistorial || loadingTicket || loadingReserva || loadingMontos;
-
-  const historialTotal = getTotalRegistros(resultadoHistorial);
-  const historialCanPrev = historialPage > 0;
-  const historialCanNext = (historialPage + 1) * HISTORIAL_PAGE_SIZE < historialTotal;
-
-  const montosTotal = getTotalRegistros(resultadoMontos);
-  const montosCanPrev = montosPage > 0;
-  const montosCanNext = (montosPage + 1) * MONTOS_PAGE_SIZE < montosTotal;
-
-  const timelineEventos = [
-    ...(resultadoTicket?.filas || []).map((row) => row?.columnas || {}),
-    ...construirTimelineReserva(),
-    ...(resultadoHistorial?.filas || []).slice(0, 20).map((row) => row?.columnas || {}),
-  ];
 
   return (
     <ReportesPageShell
       title="Consultas"
-      subtitle="Consultas avanzadas por placa, ticket, reserva y montos con timeline compacto de eventos."
+      subtitle="Modulo profesional por secciones: Tickets, Pagos, Reservas y Vehiculo."
     >
       <ReportesContextBar
         fechaDesde={fechaDesde}
         fechaHasta={fechaHasta}
         onFechaDesdeChange={setFechaDesde}
         onFechaHastaChange={setFechaHasta}
-        granularidad={granularidad}
-        onGranularidadChange={setGranularidad}
-        usuarioSeleccionado={usuarioSeleccionado}
-        onUsuarioSeleccionadoChange={setUsuarioSeleccionado}
-        usuarios={usuarios}
+        showGranularidadFilter={false}
+        showUsuarioFilter={false}
         onLimpiar={limpiarFiltrosContexto}
-        onActualizar={actualizarContexto}
+        onActualizar={cargarSeccionActiva}
         loading={loading}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="space-y-3 rounded-lg border bg-card p-3">
-          <h2 className="text-sm font-semibold">Historial consolidado por placa</h2>
-          <div className="flex gap-2">
-            <Input
-              value={placa}
-              onChange={(event) => setPlaca(event.target.value)}
-              placeholder="Ej: A123456"
-            />
-            <Button size="sm" onClick={() => buscarHistorialPorPlaca(0)} disabled={loadingHistorial}>
-              {loadingHistorial ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            </Button>
-          </div>
+      <Tabs value={seccionActiva} onValueChange={setSeccionActiva} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 border border-primary/20 bg-primary/5 md:grid-cols-4">
+          <TabsTrigger value="tickets">Tickets</TabsTrigger>
+          <TabsTrigger value="pagos">Pagos</TabsTrigger>
+          <TabsTrigger value="reservas">Reservas</TabsTrigger>
+          <TabsTrigger value="vehiculo">Vehiculo</TabsTrigger>
+        </TabsList>
 
-          {resultadoHistorial && (
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Total eventos: <span className="font-semibold text-foreground">{historialTotal}</span>
-              </p>
-              {renderTablaDinamica(
-                resultadoHistorial?.titulo || "Historial consolidado",
-                resultadoHistorial?.columnas || [],
-                resultadoHistorial?.filas || []
-              )}
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => buscarHistorialPorPlaca(historialPage - 1)}
-                  disabled={!historialCanPrev || loadingHistorial}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => buscarHistorialPorPlaca(historialPage + 1)}
-                  disabled={!historialCanNext || loadingHistorial}
-                >
-                  Siguiente
-                </Button>
-              </div>
+        <TabsContent value="tickets" className="space-y-4">
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <Button size="sm" variant="outline" onClick={() => cargarTicketsListado(ticketsPage)} disabled={loadingTickets}>
+                <RefreshCw className={`h-4 w-4 ${loadingTickets ? "animate-spin" : ""}`} />
+                Actualizar
+              </Button>
             </div>
-          )}
-        </div>
-
-        <div className="space-y-3 rounded-lg border bg-card p-3">
-          <h2 className="text-sm font-semibold">Trazabilidad ticket y detalle de reserva</h2>
-          <div className="flex gap-2">
-            <Input
-              value={codigoTicket}
-              onChange={(event) => setCodigoTicket(event.target.value)}
-              placeholder="Ej: T-1712433330000"
-            />
-            <Button size="sm" onClick={buscarTrazabilidadTicket} disabled={loadingTicket}>
-              {loadingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            </Button>
-          </div>
-
-          <div className="flex gap-2">
-            <Input
-              value={codigoReserva}
-              onChange={(event) => setCodigoReserva(event.target.value)}
-              placeholder="Ej: R-1712433330000"
-            />
-            <Button size="sm" onClick={buscarPorReserva} disabled={loadingReserva}>
-              {loadingReserva ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            </Button>
-          </div>
-
-          {resultadoTicket &&
-            renderTablaDinamica(
-              resultadoTicket?.titulo || "Trazabilidad de ticket",
-              resultadoTicket?.columnas || [],
-              resultadoTicket?.filas || []
+            {renderTablaDinamica("Tickets", ticketsListado?.columnas || [], ticketsListado?.filas || [])}
+            {renderPagination(
+              ticketsPage,
+              getTotalRegistros(ticketsListado),
+              () => cargarTicketsListado(ticketsPage - 1),
+              () => cargarTicketsListado(ticketsPage + 1),
+              loadingTickets
             )}
-
-          {resultadoReserva &&
-            renderTablaDinamica(
-              resultadoReserva?.titulo || "Detalle de reserva",
-              resultadoReserva?.columnas || [],
-              resultadoReserva?.filas || []
-            )}
-        </div>
-
-        <div className="space-y-3 rounded-lg border bg-card p-3">
-          <h2 className="text-sm font-semibold">Consulta por rango de montos y fechas</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              value={montoDesde}
-              onChange={(event) => setMontoDesde(event.target.value)}
-              placeholder="Monto desde"
-              type="number"
-              min="0"
-              step="0.01"
-            />
-            <Input
-              value={montoHasta}
-              onChange={(event) => setMontoHasta(event.target.value)}
-              placeholder="Monto hasta"
-              type="number"
-              min="0"
-              step="0.01"
-            />
           </div>
 
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => buscarPorRangoMontos(0)} disabled={loadingMontos}>
-              {loadingMontos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Consultar
-            </Button>
-          </div>
-
-          {resultadoMontos && (
-            <div className="space-y-3">
-              {renderTablaDinamica(
-                resultadoMontos?.titulo || "Pagos por rango",
-                resultadoMontos?.columnas || [],
-                resultadoMontos?.filas || []
-              )}
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => buscarPorRangoMontos(montosPage - 1)}
-                  disabled={!montosCanPrev || loadingMontos}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => buscarPorRangoMontos(montosPage + 1)}
-                  disabled={!montosCanNext || loadingMontos}
-                >
-                  Siguiente
-                </Button>
-              </div>
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <h2 className="text-sm font-semibold">Consultar por codigo de ticket</h2>
+            <div className="flex gap-2">
+              <Input value={codigoTicket} onChange={(e) => setCodigoTicket(e.target.value)} placeholder="Ej: T-1712433330000" />
+              <Button size="sm" onClick={buscarTicketPorCodigo} disabled={loadingDetalle}>
+                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-lg border bg-card p-3 space-y-2">
-        <h2 className="text-sm font-semibold">Timeline compacto de eventos ticket/reserva</h2>
-        {!timelineEventos.length ? (
-          <p className="text-xs text-muted-foreground">Realiza una consulta para visualizar eventos en formato timeline.</p>
-        ) : (
-          <div className="space-y-2">
-            {timelineEventos.slice(0, 24).map((evento, index) => (
-              <div key={`timeline-${index}`} className="rounded-md border px-2 py-2">
-                <div className="flex flex-wrap items-center justify-between gap-1">
-                  <p className="text-xs font-semibold">{evento.tipoEvento || "EVENTO"}</p>
-                  <span className="text-[11px] text-muted-foreground">{evento.fechaEvento || "-"}</span>
-                </div>
-                <p className="text-xs">Codigo: {evento.codigo || "-"} | Estado: {evento.estado || "-"}</p>
-                <p className="text-xs text-muted-foreground">{evento.detalle || "Sin detalle"}</p>
-                <p className="text-xs">Monto: {evento.monto || "-"}</p>
-              </div>
-            ))}
+            {ticketDetalle && renderTablaDinamica(ticketDetalle.titulo || "Detalle ticket", ticketDetalle.columnas || [], ticketDetalle.filas || [])}
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="pagos" className="space-y-4">
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <Button size="sm" variant="outline" onClick={() => cargarPagosListado(pagosPage)} disabled={loadingPagos}>
+                <RefreshCw className={`h-4 w-4 ${loadingPagos ? "animate-spin" : ""}`} />
+                Actualizar
+              </Button>
+            </div>
+            {renderTablaDinamica("Pagos", pagosListado?.columnas || [], pagosListado?.filas || [])}
+            {renderPagination(
+              pagosPage,
+              getTotalRegistros(pagosListado),
+              () => cargarPagosListado(pagosPage - 1),
+              () => cargarPagosListado(pagosPage + 1),
+              loadingPagos
+            )}
+          </div>
+
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <h2 className="text-sm font-semibold">Consultar pago por codigo de ticket</h2>
+            <div className="flex gap-2">
+              <Input value={codigoPagoTicket} onChange={(e) => setCodigoPagoTicket(e.target.value)} placeholder="Ej: T-1712433330000" />
+              <Button size="sm" onClick={buscarPagoPorCodigo} disabled={loadingDetalle}>
+                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
+            {pagoDetalle && renderTablaDinamica(pagoDetalle.titulo || "Detalle pago", pagoDetalle.columnas || [], pagoDetalle.filas || [])}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="reservas" className="space-y-4">
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <Button size="sm" variant="outline" onClick={() => cargarReservasListado(reservasPage)} disabled={loadingReservas}>
+                <RefreshCw className={`h-4 w-4 ${loadingReservas ? "animate-spin" : ""}`} />
+                Actualizar
+              </Button>
+            </div>
+            {renderTablaDinamica("Reservas", reservasListado?.columnas || [], reservasListado?.filas || [])}
+            {renderPagination(
+              reservasPage,
+              getTotalRegistros(reservasListado),
+              () => cargarReservasListado(reservasPage - 1),
+              () => cargarReservasListado(reservasPage + 1),
+              loadingReservas
+            )}
+          </div>
+
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <h2 className="text-sm font-semibold">Consultar por codigo de reserva</h2>
+            <div className="flex gap-2">
+              <Input value={codigoReserva} onChange={(e) => setCodigoReserva(e.target.value)} placeholder="Ej: R-1712433330000" />
+              <Button size="sm" onClick={buscarReservaPorCodigo} disabled={loadingDetalle}>
+                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
+            {reservaDetalle && renderTablaDinamica(reservaDetalle.titulo || "Detalle reserva", reservaDetalle.columnas || [], reservaDetalle.filas || [])}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="vehiculo" className="space-y-4">
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <Button size="sm" variant="outline" onClick={() => cargarVehiculosListado(vehiculosPage)} disabled={loadingVehiculos}>
+                <RefreshCw className={`h-4 w-4 ${loadingVehiculos ? "animate-spin" : ""}`} />
+                Actualizar
+              </Button>
+            </div>
+            {renderTablaDinamica("Vehiculos", vehiculosListado?.columnas || [], vehiculosListado?.filas || [])}
+            {renderPagination(
+              vehiculosPage,
+              getTotalRegistros(vehiculosListado),
+              () => cargarVehiculosListado(vehiculosPage - 1),
+              () => cargarVehiculosListado(vehiculosPage + 1),
+              loadingVehiculos
+            )}
+          </div>
+
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <h2 className="text-sm font-semibold">Consultar por codigo de vehiculo (placa)</h2>
+            <div className="flex gap-2">
+              <Input value={placaVehiculo} onChange={(e) => setPlacaVehiculo(e.target.value)} placeholder="Ej: A123456" />
+              <Button size="sm" onClick={buscarVehiculoPorCodigo} disabled={loadingDetalle}>
+                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
+
+            {vehiculoDetalle?.tickets &&
+              renderTablaDinamica(
+                vehiculoDetalle.tickets?.titulo || "Tickets del vehiculo",
+                vehiculoDetalle.tickets?.columnas || [],
+                vehiculoDetalle.tickets?.filas || []
+              )}
+
+            {vehiculoDetalle?.reservas &&
+              renderTablaDinamica(
+                vehiculoDetalle.reservas?.titulo || "Reservas del vehiculo",
+                vehiculoDetalle.reservas?.columnas || [],
+                vehiculoDetalle.reservas?.filas || []
+              )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </ReportesPageShell>
   );
 };

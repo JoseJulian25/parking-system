@@ -176,10 +176,52 @@ public class ReportesController {
         return ResponseEntity.ok(reportesService.obtenerConsultaPorCodigoTicket(codigoTicket));
     }
 
+    @GetMapping("/consultas/tickets")
+    public ResponseEntity<ReporteTablaResponseDTO> listadoTicketsPorFecha(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(reportesService.obtenerListadoTicketsPorFecha(fechaDesde, fechaHasta, page, size));
+    }
+
     @GetMapping("/consultas/reserva/{codigoReserva}")
     public ResponseEntity<ReporteTablaResponseDTO> consultaPorCodigoReserva(
             @PathVariable String codigoReserva) {
         return ResponseEntity.ok(reportesService.obtenerConsultaPorCodigoReserva(codigoReserva));
+    }
+
+    @GetMapping("/consultas/reservas")
+    public ResponseEntity<ReporteTablaResponseDTO> listadoReservasPorFecha(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(reportesService.obtenerListadoReservasPorFecha(fechaDesde, fechaHasta, page, size));
+    }
+
+    @GetMapping("/consultas/pago/{codigoTicket}")
+    public ResponseEntity<ReporteTablaResponseDTO> consultaPagoPorCodigoTicket(
+            @PathVariable String codigoTicket) {
+        return ResponseEntity.ok(reportesService.obtenerConsultaPagoPorCodigoTicket(codigoTicket));
+    }
+
+    @GetMapping("/consultas/pagos")
+    public ResponseEntity<ReporteTablaResponseDTO> listadoPagosPorFecha(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(reportesService.obtenerListadoPagosPorFecha(fechaDesde, fechaHasta, page, size));
+    }
+
+    @GetMapping("/consultas/vehiculos")
+    public ResponseEntity<ReporteTablaResponseDTO> listadoVehiculosPorFecha(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(reportesService.obtenerListadoVehiculosPorFecha(fechaDesde, fechaHasta, page, size));
     }
 
     @GetMapping("/consultas/historial-cliente")
