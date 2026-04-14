@@ -1,27 +1,27 @@
 package com.parking.controller;
 
-import java.util.Map;
-import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Map;
 
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.parking.dto.ReporteSerieTemporalResponseDTO;
-import com.parking.dto.ReporteResumenKpiResponseDTO;
-import com.parking.dto.ReporteTablaResponseDTO;
 import com.parking.dto.ReporteComparativoResponseDTO;
-import com.parking.dto.ReporteFinancieroResponseDTO;
-import com.parking.dto.ReporteTopNResponseDTO;
 import com.parking.dto.ReporteConsultaPlacaResponseDTO;
+import com.parking.dto.ReporteFinancieroResponseDTO;
+import com.parking.dto.ReporteResumenKpiResponseDTO;
+import com.parking.dto.ReporteSerieTemporalResponseDTO;
+import com.parking.dto.ReporteTablaResponseDTO;
+import com.parking.dto.ReporteTopNResponseDTO;
 import com.parking.dto.ReportesBootstrapResponseDTO;
 import com.parking.service.ReportesService;
 
@@ -148,6 +148,15 @@ public class ReportesController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
         return ResponseEntity.ok(reportesService.obtenerUtilizacionBasicaPorEspacio(fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/ocupacion/tendencia-uso-espacio")
+    public ResponseEntity<ReporteTablaResponseDTO> tendenciaUsoPorEspacio(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) String granularidad,
+            @RequestParam(required = false) Integer limiteEspacios) {
+        return ResponseEntity.ok(reportesService.obtenerTendenciaUsoPorEspacio(fechaDesde, fechaHasta, granularidad, limiteEspacios));
     }
 
     @GetMapping("/consultas")

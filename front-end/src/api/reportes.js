@@ -158,6 +158,13 @@ export const getUtilizacionPorEspacio = async (params = {}) => {
   return data;
 };
 
+export const getTendenciaUsoPorEspacio = async (params = {}) => {
+  const { data } = await client.get("/reportes/ocupacion/tendencia-uso-espacio", {
+    params: buildParams(params),
+  });
+  return data;
+};
+
 export const getEstadoReportesConsultas = async () => {
   const { data } = await client.get("/reportes/consultas");
   return data;

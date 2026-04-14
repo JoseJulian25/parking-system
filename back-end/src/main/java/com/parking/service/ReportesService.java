@@ -1,10 +1,11 @@
 package com.parking.service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -15,13 +16,12 @@ import java.time.temporal.WeekFields;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.awt.Color;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -40,17 +40,16 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-
-import com.parking.dto.ReporteConsultaPlacaResponseDTO;
 import com.parking.dto.ReporteComparativoItemDTO;
 import com.parking.dto.ReporteComparativoResponseDTO;
+import com.parking.dto.ReporteConsultaPlacaResponseDTO;
 import com.parking.dto.ReporteFinancieroResponseDTO;
 import com.parking.dto.ReporteIndicadorFinancieroDTO;
 import com.parking.dto.ReporteKpiDTO;
 import com.parking.dto.ReporteResumenKpiResponseDTO;
+import com.parking.dto.ReporteSeccionDTO;
 import com.parking.dto.ReporteSerieTemporalItemDTO;
 import com.parking.dto.ReporteSerieTemporalResponseDTO;
-import com.parking.dto.ReporteSeccionDTO;
 import com.parking.dto.ReporteTablaFilaDTO;
 import com.parking.dto.ReporteTablaResponseDTO;
 import com.parking.dto.ReporteTopNItemDTO;
@@ -516,6 +515,70 @@ public class ReportesService {
 
     return new ReporteTablaResponseDTO("Utilizacion basica por espacio", columnas, filas, (long) filas.size());
     }
+
+        @Transactional(readOnly = true)
+        public ReporteTablaResponseDTO obtenerTendenciaUsoPorEspacio(
+            LocalDateTime fechaDesde,
+            LocalDateTime fechaHasta,
+            String granularidad,
+            Integer limiteEspacios) {
+        RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
+        String granularidadNormalizada = normalizarGranularidad(granularidad);
+        int limite = limiteEspacios == null ? 8 : Math.min(Math.max(limiteEspacios, 1), 12);
+
+        List<Ticket> tickets = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
+            rango.fechaDesde(),
+            rango.fechaHasta()).stream()
+            .filter(ticket -> ticket.getHoraEntrada() != null)
+            .filter(ticket -> ticket.getEspacio() != null && ticket.getEspacio().getCodigoEspacio() != null)
+            .toList();
+
+        Map<String, Long> totalPorEspacio = tickets.stream()
+            .collect(Collectors.groupingBy(
+                ticket -> ticket.getEspacio().getCodigoEspacio(),
+                Collectors.counting()));
+
+        List<String> espaciosTop = totalPorEspacio.entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder())
+                .thenComparing(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER)))
+            .limit(limite)
+            .map(Map.Entry::getKey)
+            .toList();
+
+        Set<String> espaciosSet = Set.copyOf(espaciosTop);
+
+        Map<String, Map<String, Long>> usosPorPeriodoYEspacio = tickets.stream()
+            .filter(ticket -> espaciosSet.contains(ticket.getEspacio().getCodigoEspacio()))
+            .collect(Collectors.groupingBy(
+                ticket -> construirEtiquetaPeriodo(ticket.getHoraEntrada(), granularidadNormalizada),
+                Collectors.groupingBy(
+                    ticket -> ticket.getEspacio().getCodigoEspacio(),
+                    Collectors.counting())));
+
+        List<String> periodos = usosPorPeriodoYEspacio.keySet().stream()
+            .sorted()
+            .toList();
+
+        List<String> columnas = List.of("periodo", "codigoEspacio", "usos");
+        List<ReporteTablaFilaDTO> filas = periodos.stream()
+            .flatMap(periodo -> espaciosTop.stream().map(codigoEspacio -> {
+                Map<String, String> row = new LinkedHashMap<>();
+                row.put("periodo", periodo);
+                row.put("codigoEspacio", codigoEspacio);
+                row.put("usos", String.valueOf(
+                    usosPorPeriodoYEspacio
+                        .getOrDefault(periodo, java.util.Collections.emptyMap())
+                        .getOrDefault(codigoEspacio, 0L)));
+                return new ReporteTablaFilaDTO(row);
+            }))
+            .toList();
+
+        return new ReporteTablaResponseDTO(
+            "Tendencia de uso por espacio",
+            columnas,
+            filas,
+            (long) filas.size());
+        }
 
     @Transactional(readOnly = true)
     public ReporteConsultaPlacaResponseDTO obtenerConsultaPorPlaca(String placa) {

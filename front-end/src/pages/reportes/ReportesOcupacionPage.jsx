@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,13 +12,10 @@ import {
 } from "recharts";
 
 import {
-  getCapacidadActivaInactiva,
-  getOcupacionGlobal,
-  getOcupacionPorTipo,
+  getTendenciaUsoPorEspacio,
   getReportesErrorMessage,
   getUtilizacionPorEspacio,
 } from "../../api/reportes";
-import { getUsuarios } from "../../api/usuarios";
 import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
 import { ReportesFetchState } from "../../components/reportes/ReportesFetchState";
 import { ReportesPageShell } from "../../components/reportes/ReportesPageShell";
@@ -55,25 +52,19 @@ const toApiLocalDateTime = (value) => {
 
 const toNumber = (value) => Number(value || 0);
 
-const parseKpisByCode = (kpis = []) => {
-  return new Map((Array.isArray(kpis) ? kpis : []).map((item) => [item.codigo, item.valor]));
-};
+const LINE_COLORS = ["#0f172a", "#0ea5e9", "#16a34a", "#f59e0b", "#ef4444", "#7c3aed", "#14b8a6", "#e11d48"];
 
 export const ReportesOcupacionPage = () => {
   const [fechaDesde, setFechaDesde] = useState(startOfTodayInput());
   const [fechaHasta, setFechaHasta] = useState(nowInput());
   const [granularidad, setGranularidad] = useState("dia");
-  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState("TODOS");
-  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [canRetry, setCanRetry] = useState(false);
 
-  const [ocupacionGlobalKpis, setOcupacionGlobalKpis] = useState([]);
-  const [capacidadKpis, setCapacidadKpis] = useState([]);
-  const [ocupacionTipoRows, setOcupacionTipoRows] = useState([]);
   const [utilizacionRows, setUtilizacionRows] = useState([]);
+  const [tendenciaRows, setTendenciaRows] = useState([]);
 
   const cargarDatos = async () => {
     try {
@@ -90,17 +81,17 @@ export const ReportesOcupacionPage = () => {
         fechaHasta: toApiLocalDateTime(fechaHasta),
       };
 
-      const [globalResp, tipoResp, capacidadResp, utilizacionResp] = await Promise.all([
-        getOcupacionGlobal(),
-        getOcupacionPorTipo(),
-        getCapacidadActivaInactiva(),
+      const [utilizacionResp, tendenciaResp] = await Promise.all([
         getUtilizacionPorEspacio(paramsRango),
+        getTendenciaUsoPorEspacio({
+          ...paramsRango,
+          granularidad,
+          limiteEspacios: 8,
+        }),
       ]);
 
-      setOcupacionGlobalKpis(Array.isArray(globalResp?.kpis) ? globalResp.kpis : []);
-      setCapacidadKpis(Array.isArray(capacidadResp?.kpis) ? capacidadResp.kpis : []);
-      setOcupacionTipoRows(Array.isArray(tipoResp?.filas) ? tipoResp.filas : []);
       setUtilizacionRows(Array.isArray(utilizacionResp?.filas) ? utilizacionResp.filas : []);
+      setTendenciaRows(Array.isArray(tendenciaResp?.filas) ? tendenciaResp.filas : []);
     } catch (error) {
       const message = await getReportesErrorMessage(error, "No se pudieron cargar los reportes de ocupacion");
       setErrorMessage(message);
@@ -117,57 +108,70 @@ export const ReportesOcupacionPage = () => {
   }, []);
 
   useEffect(() => {
-    const cargarUsuarios = async () => {
-      try {
-        const data = await getUsuarios();
-        setUsuarios(Array.isArray(data) ? data : []);
-      } catch (error) {
-        const message = await getReportesErrorMessage(error, "No se pudo cargar la lista de usuarios");
-        toast.error(message);
-      }
-    };
-
-    cargarUsuarios();
-  }, []);
+    if (!hasLoadedOnce) return;
+    cargarDatos();
+  }, [fechaDesde, fechaHasta, granularidad]);
 
   const resumen = useMemo(() => {
-    const globalMap = parseKpisByCode(ocupacionGlobalKpis);
-    const capMap = parseKpisByCode(capacidadKpis);
+    const activos = utilizacionRows.filter((fila) => {
+      const c = fila?.columnas || {};
+      return String(c.activo || "").toUpperCase() === "SI";
+    });
+
+    const inactivos = utilizacionRows.length - activos.length;
+    const ocupados = activos.filter((fila) => toNumber(fila?.columnas?.usosEnRango) > 0).length;
+    const libres = Math.max(0, activos.length - ocupados);
+    const porcentaje = activos.length === 0 ? 0 : (ocupados * 100) / activos.length;
 
     return {
-      ocupacionPorcentaje: toNumber(globalMap.get("OCUP_PORCENTAJE")),
-      ocupados: toNumber(globalMap.get("OCUP_OCUPADOS")),
-      libres: toNumber(globalMap.get("OCUP_LIBRES")),
-      activos: toNumber(globalMap.get("OCUP_TOTAL_ACTIVOS")),
-      capacidadTotal: toNumber(capMap.get("CAP_TOTAL")),
-      capacidadActiva: toNumber(capMap.get("CAP_ACTIVA")),
-      capacidadInactiva: toNumber(capMap.get("CAP_INACTIVA")),
+      ocupacionPorcentaje: porcentaje,
+      ocupados,
+      libres,
+      activos: activos.length,
+      capacidadTotal: utilizacionRows.length,
+      capacidadActiva: activos.length,
+      capacidadInactiva: inactivos,
     };
-  }, [ocupacionGlobalKpis, capacidadKpis]);
+  }, [utilizacionRows]);
 
-  const ocupacionTipoData = useMemo(() => {
-    return ocupacionTipoRows.map((fila) => {
+  const tendenciaSeries = useMemo(() => {
+    const totals = new Map();
+    tendenciaRows.forEach((fila) => {
       const c = fila?.columnas || {};
-      return {
-        tipo: c.tipoVehiculo || "-",
-        ocupados: toNumber(c.ocupados),
-        libres: toNumber(c.libres),
-      };
+      const codigoEspacio = c.codigoEspacio || "-";
+      totals.set(codigoEspacio, (totals.get(codigoEspacio) || 0) + toNumber(c.usos));
     });
-  }, [ocupacionTipoRows]);
 
-  const capacidadData = useMemo(() => {
-    return [
-      { estado: "Activa", cantidad: resumen.capacidadActiva },
-      { estado: "Inactiva", cantidad: resumen.capacidadInactiva },
-    ];
-  }, [resumen.capacidadActiva, resumen.capacidadInactiva]);
+    return Array.from(totals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([codigo]) => codigo);
+  }, [tendenciaRows]);
+
+  const tendenciaChartData = useMemo(() => {
+    const periodos = [...new Set(tendenciaRows.map((fila) => fila?.columnas?.periodo).filter(Boolean))].sort();
+
+    const usoLookup = new Map();
+    tendenciaRows.forEach((fila) => {
+      const c = fila?.columnas || {};
+      const periodo = c.periodo;
+      const codigoEspacio = c.codigoEspacio;
+      if (!periodo || !codigoEspacio) return;
+      usoLookup.set(`${periodo}|${codigoEspacio}`, toNumber(c.usos));
+    });
+
+    return periodos.map((periodo) => {
+      const row = { periodo };
+      tendenciaSeries.forEach((codigoEspacio) => {
+        row[codigoEspacio] = usoLookup.get(`${periodo}|${codigoEspacio}`) || 0;
+      });
+      return row;
+    });
+  }, [tendenciaRows, tendenciaSeries]);
 
   const limpiarFiltros = () => {
     setFechaDesde(startOfTodayInput());
     setFechaHasta(nowInput());
     setGranularidad("dia");
-    setUsuarioSeleccionado("TODOS");
   };
 
   return (
@@ -180,11 +184,9 @@ export const ReportesOcupacionPage = () => {
         fechaHasta={fechaHasta}
         onFechaDesdeChange={setFechaDesde}
         onFechaHastaChange={setFechaHasta}
+        showUsuarioFilter={false}
         granularidad={granularidad}
         onGranularidadChange={setGranularidad}
-        usuarioSeleccionado={usuarioSeleccionado}
-        onUsuarioSeleccionadoChange={setUsuarioSeleccionado}
-        usuarios={usuarios}
         onLimpiar={limpiarFiltros}
         onActualizar={cargarDatos}
         loading={loading}
@@ -204,11 +206,11 @@ export const ReportesOcupacionPage = () => {
           <p className="text-lg font-semibold text-primary">{resumen.ocupacionPorcentaje.toFixed(2)}%</p>
         </div>
         <div className="rounded-md border px-3 py-2">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ocupados</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Espacios con uso</p>
           <p className="text-lg font-semibold">{resumen.ocupados}</p>
         </div>
         <div className="rounded-md border px-3 py-2">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Libres</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Espacios sin uso</p>
           <p className="text-lg font-semibold">{resumen.libres}</p>
         </div>
         <div className="rounded-md border px-3 py-2">
@@ -229,39 +231,40 @@ export const ReportesOcupacionPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="rounded-lg border bg-card p-3">
-          <h2 className="mb-2 text-sm font-semibold">Ocupacion por tipo de vehiculo</h2>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={ocupacionTipoData} margin={{ top: 12, right: 10, bottom: 4, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                <XAxis dataKey="tipo" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={30} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="ocupados" name="Ocupados" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="libres" name="Libres" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      <div className="rounded-lg border bg-card p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Tendencia de uso por espacio</h2>
+          <span className="text-xs text-muted-foreground">Top {Math.min(tendenciaSeries.length, 8)} espacios por uso</span>
         </div>
 
-        <div className="rounded-lg border bg-card p-3">
-          <h2 className="mb-2 text-sm font-semibold">Capacidad activa vs inactiva</h2>
+        {!tendenciaChartData.length ? (
+          <div className="flex h-72 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
+            No hay datos de tendencia para el rango seleccionado.
+          </div>
+        ) : (
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={capacidadData} margin={{ top: 12, right: 10, bottom: 4, left: 0 }}>
+              <LineChart data={tendenciaChartData} margin={{ top: 12, right: 10, bottom: 4, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                <XAxis dataKey="estado" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={30} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="cantidad" name="Espacios" fill="#0f172a" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                {tendenciaSeries.map((codigoEspacio, index) => (
+                  <Line
+                    key={codigoEspacio}
+                    type="monotone"
+                    dataKey={codigoEspacio}
+                    name={codigoEspacio}
+                    stroke={LINE_COLORS[index % LINE_COLORS.length]}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ))}
+              </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card p-3">

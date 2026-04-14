@@ -442,7 +442,6 @@ export const ReportesFinancierosPage = () => {
           <TableHeader>
             <TableRow>
               <TableHead className="h-9 px-2">Metodo</TableHead>
-              <TableHead className="h-9 px-2">Moneda</TableHead>
               <TableHead className="h-9 px-2 text-right">Ingresos</TableHead>
             </TableRow>
           </TableHeader>
@@ -457,8 +456,7 @@ export const ReportesFinancierosPage = () => {
               ingresosMetodoPago.map((row) => (
                 <TableRow key={row.etiqueta}>
                   <TableCell className="px-2 py-2 font-medium">{row.etiqueta}</TableCell>
-                  <TableCell className="px-2 py-2">{row.moneda}</TableCell>
-                  <TableCell className="px-2 py-2 text-right">{formatMoney(row.valor, row.moneda)}</TableCell>
+                  <TableCell className="px-2 py-2 text-right">{formatMoney(row.valor, "DOP")}</TableCell>
                 </TableRow>
               ))
             )}

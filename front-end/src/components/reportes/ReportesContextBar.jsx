@@ -16,6 +16,7 @@ export const ReportesContextBar = ({
   fechaHasta,
   onFechaDesdeChange,
   onFechaHastaChange,
+  showUsuarioFilter = true,
   usuarioSeleccionado = "TODOS",
   onUsuarioSeleccionadoChange,
   usuarios = [],
@@ -26,25 +27,29 @@ export const ReportesContextBar = ({
   onActualizar,
   loading = false,
 }) => {
+  const gridColsClass = showUsuarioFilter ? "md:grid-cols-6" : "md:grid-cols-5";
+
   return (
     <div className="rounded-lg border bg-card p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-6">
+      <div className={`grid grid-cols-1 gap-2 ${gridColsClass}`}>
         <Input type="datetime-local" value={fechaDesde} onChange={(e) => onFechaDesdeChange(e.target.value)} />
         <Input type="datetime-local" value={fechaHasta} onChange={(e) => onFechaHastaChange(e.target.value)} />
 
-        <Select value={usuarioSeleccionado} onValueChange={onUsuarioSeleccionadoChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Usuario" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="TODOS">Todos los usuarios</SelectItem>
-            {usuarios.map((usuario) => (
-              <SelectItem key={usuario.id} value={String(usuario.id)}>
-                {usuario.nombre}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {showUsuarioFilter && (
+          <Select value={usuarioSeleccionado} onValueChange={onUsuarioSeleccionadoChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Usuario" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="TODOS">Todos los usuarios</SelectItem>
+              {usuarios.map((usuario) => (
+                <SelectItem key={usuario.id} value={String(usuario.id)}>
+                  {usuario.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Select value={granularidad} onValueChange={onGranularidadChange}>
           <SelectTrigger>
