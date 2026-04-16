@@ -182,14 +182,14 @@ export const ReportesReservasPage = () => {
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {kpis.map((kpi) => (
-          <div key={kpi.key} className="rounded-md border px-3 py-2">
+          <div key={kpi.key} className="reportes-kpi">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{kpi.label}</p>
             <p className="text-lg font-semibold">{kpi.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <h2 className="mb-2 text-sm font-semibold">Reservas por estado</h2>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -206,12 +206,12 @@ export const ReportesReservasPage = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="rounded-lg border bg-card p-3">
+        <div className="reportes-panel">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Cancelaciones con motivo</h2>
             <span className="text-xs text-muted-foreground">{cancelaciones.length} registros</span>
           </div>
-          <Table className="text-xs">
+          <Table className="reportes-table">
             <TableHeader>
               <TableRow>
                 <TableHead className="h-9 px-2">Reserva</TableHead>
@@ -248,12 +248,12 @@ export const ReportesReservasPage = () => {
           </Table>
         </div>
 
-        <div className="rounded-lg border bg-card p-3">
+        <div className="reportes-panel">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Reservas proximas</h2>
             <span className="text-xs text-muted-foreground">Ventana fija: 30 min</span>
           </div>
-          <Table className="text-xs">
+          <Table className="reportes-table">
             <TableHeader>
               <TableRow>
                 <TableHead className="h-9 px-2">Reserva</TableHead>

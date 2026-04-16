@@ -49,13 +49,13 @@ export const LoginPage = () => {
   };
 
   return (
-     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-          <Card className="w-full max-w-md">
+     <div className="app-shell min-h-screen flex items-center justify-center p-4">
+          <Card className="w-full max-w-md border-slate-300/90">
             <CardHeader className="space-y-1 text-center">
               <div className="flex justify-center mb-4">
                   <img className="w-20 h-20" src="icon.png" alt="" />
               </div>
-              <CardTitle className="text-2xl">SmartPark</CardTitle>
+              <CardTitle className="text-xl">SmartPark</CardTitle>
               <CardDescription>
                 Ingrese sus credenciales para acceder al sistema
               </CardDescription>

@@ -4,33 +4,33 @@
 
 @layer base {
   :root {
-    --background: 210 18% 95.5%;
+    --background: 214 30% 93.5%;
     --foreground: 222.2 84% 4.9%;
-    --card: 210 18% 97.5%;
+    --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-    --popover: 210 18% 97.5%;
+    --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 216 44.4% 28.2%;
+    --primary: 215 46% 32%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 20% 93%;
+    --secondary: 214 24% 91%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 20% 93%;
+    --muted: 214 20% 92%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 20% 93%;
+    --accent: 214 24% 90%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 22% 86%;
-    --input: 214.3 22% 86%;
+    --border: 214 20% 83%;
+    --input: 214 20% 83%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --radius: 0.4rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     
-    --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, system-ui, -apple-system, sans-serif;
   }
 
   .dark {
@@ -77,5 +77,102 @@
 
   a {
     color: inherit;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.8),rgba(229,236,246,0.75)_45%,rgba(221,230,242,0.85))];
+  }
+
+  .app-content-wrap {
+    @apply rounded-md border border-slate-300/80 bg-white px-3 py-3 shadow-sm md:px-4 md:py-4;
+  }
+
+  .app-sidebar {
+    background: linear-gradient(180deg, #1f3a56 0%, #1a3149 100%);
+    color: #e7eef6;
+    border-right: 1px solid rgba(15, 23, 42, 0.25);
+  }
+
+  .app-sidebar hr,
+  .app-sidebar .sidebar-separator {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .app-sidebar-item {
+    @apply rounded-md px-3 py-2 text-[13px] font-semibold transition-colors;
+  }
+
+  .app-sidebar-item-active {
+    background: #14b8a6;
+    color: #f8fafc;
+  }
+
+  .app-sidebar-item-idle {
+    color: #dbe7f2;
+  }
+
+  .app-sidebar-item-idle:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+  }
+
+  .app-sidebar-subitem {
+    @apply rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors;
+  }
+
+  .app-sidebar-subitem-active {
+    background: rgba(20, 184, 166, 0.2);
+    color: #e6fffb;
+  }
+
+  .app-sidebar-subitem-idle {
+    color: #c5d7ea;
+  }
+
+  .app-sidebar-subitem-idle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+
+  .reportes-shell {
+    @apply mx-auto w-full max-w-[1180px] space-y-3;
+  }
+
+  .reportes-header {
+    @apply rounded-md border bg-card px-3 py-2;
+  }
+
+  .reportes-panel {
+    @apply rounded-md border bg-card px-3 py-3;
+  }
+
+  .reportes-field-label {
+    @apply block text-[11px] font-medium uppercase tracking-wide text-muted-foreground;
+  }
+
+  .reportes-kpi {
+    @apply rounded-md border bg-card px-3 py-2;
+  }
+
+  .reportes-tabs {
+    @apply h-9 rounded-md border border-slate-300/90 bg-slate-100/70 p-1;
+  }
+
+  .reportes-tabs [role="tab"] {
+    @apply px-2.5 py-1 text-xs data-[state=active]:border data-[state=active]:border-slate-300 data-[state=active]:bg-white;
+  }
+
+  .reportes-table {
+    @apply text-xs;
+  }
+
+  .reportes-table thead tr {
+    @apply border-b border-slate-300 bg-slate-100/80;
+  }
+
+  .reportes-table tbody tr:hover {
+    @apply bg-slate-50/80;
   }
 }

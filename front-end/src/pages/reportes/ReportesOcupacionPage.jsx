@@ -201,37 +201,37 @@ export const ReportesOcupacionPage = () => {
       />
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ocupacion global</p>
           <p className="text-lg font-semibold text-primary">{resumen.ocupacionPorcentaje.toFixed(2)}%</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Espacios con uso</p>
           <p className="text-lg font-semibold">{resumen.ocupados}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Espacios sin uso</p>
           <p className="text-lg font-semibold">{resumen.libres}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Activos</p>
           <p className="text-lg font-semibold">{resumen.activos}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Capacidad total</p>
           <p className="text-lg font-semibold">{resumen.capacidadTotal}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Capacidad activa</p>
           <p className="text-lg font-semibold">{resumen.capacidadActiva}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Capacidad inactiva</p>
           <p className="text-lg font-semibold">{resumen.capacidadInactiva}</p>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Tendencia de uso por espacio</h2>
           <span className="text-xs text-muted-foreground">Top {Math.min(tendenciaSeries.length, 8)} espacios por uso</span>
@@ -267,13 +267,13 @@ export const ReportesOcupacionPage = () => {
         )}
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Utilizacion por espacio</h2>
           <span className="text-xs text-muted-foreground">{utilizacionRows.length} espacios</span>
         </div>
 
-        <Table className="text-xs">
+        <Table className="reportes-table">
           <TableHeader>
             <TableRow>
               <TableHead className="h-9 px-2">Espacio</TableHead>

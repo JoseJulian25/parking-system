@@ -56,15 +56,18 @@ const getTotalRegistros = (response) => {
   return Number.isFinite(total) ? total : 0;
 };
 
-const renderTablaDinamica = (titulo, columnas = [], filas = []) => {
+const renderTablaDinamica = (titulo, columnas = [], filas = [], options = {}) => {
+  const showTotal = options.showTotal ?? true;
   return (
-    <div className="rounded-md border">
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <h3 className="text-sm font-semibold">{titulo}</h3>
-        <span className="text-xs text-muted-foreground">{filas.length} registros</span>
-      </div>
+    <div className="rounded-md border border-slate-300/90 bg-white">
+      {titulo ? (
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <h3 className="text-sm font-semibold">{titulo}</h3>
+          {showTotal ? <span className="text-xs text-muted-foreground">{filas.length} registros</span> : null}
+        </div>
+      ) : null}
 
-      <Table className="text-xs">
+      <Table className="reportes-table">
         <TableHeader>
           <TableRow>
             {columnas.map((columna) => (
@@ -97,6 +100,21 @@ const renderTablaDinamica = (titulo, columnas = [], filas = []) => {
           )}
         </TableBody>
       </Table>
+    </div>
+  );
+};
+
+const renderBusquedaCodigo = ({ label, value, onChange, onSearch, placeholder, loading }) => {
+  return (
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+      <div className="space-y-1">
+        <label className="reportes-field-label">{label}</label>
+        <Input className="h-9 text-xs" value={value} onChange={onChange} placeholder={placeholder} />
+      </div>
+      <Button size="sm" className="h-9 px-3 text-xs" onClick={onSearch} disabled={loading}>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+        Buscar
+      </Button>
     </div>
   );
 };
@@ -309,24 +327,34 @@ export const ReportesConsultasPage = () => {
         loading={loading}
       />
 
-      <Tabs value={seccionActiva} onValueChange={setSeccionActiva} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 border border-primary/20 bg-primary/5 md:grid-cols-4">
+      <Tabs value={seccionActiva} onValueChange={setSeccionActiva} className="space-y-3">
+        <TabsList className="reportes-tabs grid w-full grid-cols-2 md:grid-cols-4">
           <TabsTrigger value="tickets">Tickets</TabsTrigger>
           <TabsTrigger value="pagos">Pagos</TabsTrigger>
           <TabsTrigger value="reservas">Reservas</TabsTrigger>
           <TabsTrigger value="vehiculo">Vehiculo</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tickets" className="space-y-4">
-          <div className="rounded-lg border bg-card p-3 space-y-3">
+        <TabsContent value="tickets" className="space-y-3">
+          <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <h2 className="text-sm font-semibold">Tickets</h2>
               <Button size="sm" variant="outline" onClick={() => cargarTicketsListado(ticketsPage)} disabled={loadingTickets}>
                 <RefreshCw className={`h-4 w-4 ${loadingTickets ? "animate-spin" : ""}`} />
                 Actualizar
               </Button>
             </div>
-            {renderTablaDinamica("Tickets", ticketsListado?.columnas || [], ticketsListado?.filas || [])}
+
+            {renderBusquedaCodigo({
+              label: "Codigo de ticket",
+              value: codigoTicket,
+              onChange: (e) => setCodigoTicket(e.target.value),
+              onSearch: buscarTicketPorCodigo,
+              placeholder: "Ej: T-1712433330000",
+              loading: loadingDetalle,
+            })}
+
+            {renderTablaDinamica(null, ticketsListado?.columnas || [], ticketsListado?.filas || [])}
             {renderPagination(
               ticketsPage,
               getTotalRegistros(ticketsListado),
@@ -334,30 +362,35 @@ export const ReportesConsultasPage = () => {
               () => cargarTicketsListado(ticketsPage + 1),
               loadingTickets
             )}
-          </div>
 
-          <div className="rounded-lg border bg-card p-3 space-y-3">
-            <h2 className="text-sm font-semibold">Consultar por codigo de ticket</h2>
-            <div className="flex gap-2">
-              <Input value={codigoTicket} onChange={(e) => setCodigoTicket(e.target.value)} placeholder="Ej: T-1712433330000" />
-              <Button size="sm" onClick={buscarTicketPorCodigo} disabled={loadingDetalle}>
-                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
-            {ticketDetalle && renderTablaDinamica(ticketDetalle.titulo || "Detalle ticket", ticketDetalle.columnas || [], ticketDetalle.filas || [])}
+            {ticketDetalle ? (
+              <div className="pt-1">
+                {renderTablaDinamica(ticketDetalle.titulo || "Detalle ticket", ticketDetalle.columnas || [], ticketDetalle.filas || [])}
+              </div>
+            ) : null}
           </div>
         </TabsContent>
 
-        <TabsContent value="pagos" className="space-y-4">
-          <div className="rounded-lg border bg-card p-3 space-y-3">
+        <TabsContent value="pagos" className="space-y-3">
+          <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <h2 className="text-sm font-semibold">Pagos</h2>
               <Button size="sm" variant="outline" onClick={() => cargarPagosListado(pagosPage)} disabled={loadingPagos}>
                 <RefreshCw className={`h-4 w-4 ${loadingPagos ? "animate-spin" : ""}`} />
                 Actualizar
               </Button>
             </div>
-            {renderTablaDinamica("Pagos", pagosListado?.columnas || [], pagosListado?.filas || [])}
+
+            {renderBusquedaCodigo({
+              label: "Codigo de ticket",
+              value: codigoPagoTicket,
+              onChange: (e) => setCodigoPagoTicket(e.target.value),
+              onSearch: buscarPagoPorCodigo,
+              placeholder: "Ej: T-1712433330000",
+              loading: loadingDetalle,
+            })}
+
+            {renderTablaDinamica(null, pagosListado?.columnas || [], pagosListado?.filas || [])}
             {renderPagination(
               pagosPage,
               getTotalRegistros(pagosListado),
@@ -365,30 +398,35 @@ export const ReportesConsultasPage = () => {
               () => cargarPagosListado(pagosPage + 1),
               loadingPagos
             )}
-          </div>
 
-          <div className="rounded-lg border bg-card p-3 space-y-3">
-            <h2 className="text-sm font-semibold">Consultar pago por codigo de ticket</h2>
-            <div className="flex gap-2">
-              <Input value={codigoPagoTicket} onChange={(e) => setCodigoPagoTicket(e.target.value)} placeholder="Ej: T-1712433330000" />
-              <Button size="sm" onClick={buscarPagoPorCodigo} disabled={loadingDetalle}>
-                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
-            {pagoDetalle && renderTablaDinamica(pagoDetalle.titulo || "Detalle pago", pagoDetalle.columnas || [], pagoDetalle.filas || [])}
+            {pagoDetalle ? (
+              <div className="pt-1">
+                {renderTablaDinamica(pagoDetalle.titulo || "Detalle pago", pagoDetalle.columnas || [], pagoDetalle.filas || [])}
+              </div>
+            ) : null}
           </div>
         </TabsContent>
 
-        <TabsContent value="reservas" className="space-y-4">
-          <div className="rounded-lg border bg-card p-3 space-y-3">
+        <TabsContent value="reservas" className="space-y-3">
+          <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <h2 className="text-sm font-semibold">Reservas</h2>
               <Button size="sm" variant="outline" onClick={() => cargarReservasListado(reservasPage)} disabled={loadingReservas}>
                 <RefreshCw className={`h-4 w-4 ${loadingReservas ? "animate-spin" : ""}`} />
                 Actualizar
               </Button>
             </div>
-            {renderTablaDinamica("Reservas", reservasListado?.columnas || [], reservasListado?.filas || [])}
+
+            {renderBusquedaCodigo({
+              label: "Codigo de reserva",
+              value: codigoReserva,
+              onChange: (e) => setCodigoReserva(e.target.value),
+              onSearch: buscarReservaPorCodigo,
+              placeholder: "Ej: R-1712433330000",
+              loading: loadingDetalle,
+            })}
+
+            {renderTablaDinamica(null, reservasListado?.columnas || [], reservasListado?.filas || [])}
             {renderPagination(
               reservasPage,
               getTotalRegistros(reservasListado),
@@ -396,30 +434,35 @@ export const ReportesConsultasPage = () => {
               () => cargarReservasListado(reservasPage + 1),
               loadingReservas
             )}
-          </div>
 
-          <div className="rounded-lg border bg-card p-3 space-y-3">
-            <h2 className="text-sm font-semibold">Consultar por codigo de reserva</h2>
-            <div className="flex gap-2">
-              <Input value={codigoReserva} onChange={(e) => setCodigoReserva(e.target.value)} placeholder="Ej: R-1712433330000" />
-              <Button size="sm" onClick={buscarReservaPorCodigo} disabled={loadingDetalle}>
-                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
-            {reservaDetalle && renderTablaDinamica(reservaDetalle.titulo || "Detalle reserva", reservaDetalle.columnas || [], reservaDetalle.filas || [])}
+            {reservaDetalle ? (
+              <div className="pt-1">
+                {renderTablaDinamica(reservaDetalle.titulo || "Detalle reserva", reservaDetalle.columnas || [], reservaDetalle.filas || [])}
+              </div>
+            ) : null}
           </div>
         </TabsContent>
 
-        <TabsContent value="vehiculo" className="space-y-4">
-          <div className="rounded-lg border bg-card p-3 space-y-3">
+        <TabsContent value="vehiculo" className="space-y-3">
+          <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Listado por fecha</h2>
+              <h2 className="text-sm font-semibold">Vehiculo</h2>
               <Button size="sm" variant="outline" onClick={() => cargarVehiculosListado(vehiculosPage)} disabled={loadingVehiculos}>
                 <RefreshCw className={`h-4 w-4 ${loadingVehiculos ? "animate-spin" : ""}`} />
                 Actualizar
               </Button>
             </div>
-            {renderTablaDinamica("Vehiculos", vehiculosListado?.columnas || [], vehiculosListado?.filas || [])}
+
+            {renderBusquedaCodigo({
+              label: "Placa",
+              value: placaVehiculo,
+              onChange: (e) => setPlacaVehiculo(e.target.value),
+              onSearch: buscarVehiculoPorCodigo,
+              placeholder: "Ej: A123456",
+              loading: loadingDetalle,
+            })}
+
+            {renderTablaDinamica(null, vehiculosListado?.columnas || [], vehiculosListado?.filas || [])}
             {renderPagination(
               vehiculosPage,
               getTotalRegistros(vehiculosListado),
@@ -427,16 +470,6 @@ export const ReportesConsultasPage = () => {
               () => cargarVehiculosListado(vehiculosPage + 1),
               loadingVehiculos
             )}
-          </div>
-
-          <div className="rounded-lg border bg-card p-3 space-y-3">
-            <h2 className="text-sm font-semibold">Consultar por codigo de vehiculo (placa)</h2>
-            <div className="flex gap-2">
-              <Input value={placaVehiculo} onChange={(e) => setPlacaVehiculo(e.target.value)} placeholder="Ej: A123456" />
-              <Button size="sm" onClick={buscarVehiculoPorCodigo} disabled={loadingDetalle}>
-                {loadingDetalle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
 
             {vehiculoDetalle?.tickets &&
               renderTablaDinamica(

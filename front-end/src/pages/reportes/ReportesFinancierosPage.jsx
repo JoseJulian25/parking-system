@@ -280,27 +280,27 @@ export const ReportesFinancierosPage = () => {
       />
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ingresos totales</p>
           <p className="text-lg font-semibold text-primary">{formatMoney(ingresosTotales)}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ticket promedio</p>
           <p className="text-lg font-semibold">{formatMoney(ticketPromedio)}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Variacion vs periodo anterior</p>
           <p className={`text-lg font-semibold ${colorVariacion}`}>
             {variacionPeriodoAnterior.toFixed(2)}%
           </p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Estadia promedio</p>
           <p className="text-lg font-semibold">{formatMinutes(estadiaPromedio)}</p>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <h2 className="mb-2 text-sm font-semibold">Ingresos por tiempo</h2>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -325,7 +325,7 @@ export const ReportesFinancierosPage = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="rounded-lg border bg-card p-3">
+        <div className="reportes-panel">
           <h2 className="mb-2 text-sm font-semibold">Ingresos por tipo de vehiculo</h2>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -341,7 +341,7 @@ export const ReportesFinancierosPage = () => {
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-3">
+        <div className="reportes-panel">
           <h2 className="mb-2 text-sm font-semibold">Top horas pico por ingreso</h2>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -358,13 +358,13 @@ export const ReportesFinancierosPage = () => {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Ingresos por metodo de pago</h2>
           <span className="text-xs text-muted-foreground">{ingresosMetodoPago.length} metodos</span>
         </div>
 
-        <Table className="text-xs">
+        <Table className="reportes-table">
           <TableHeader>
             <TableRow>
               <TableHead className="h-9 px-2">Metodo</TableHead>

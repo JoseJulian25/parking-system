@@ -11,7 +11,7 @@ export const ReportesFetchState = ({
 }) => {
   if (loading) {
     return (
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>{loadingText}</span>
@@ -28,7 +28,7 @@ export const ReportesFetchState = ({
 
   if (errorMessage) {
     return (
-      <div className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-rose-900">
+      <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-rose-900">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4" />

@@ -25,9 +25,6 @@ export const ReservasPage = () => {
         <h1 className="text-2xl font-semibold tracking-tight">
           Gestión de Reservas
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Confirme llegadas y gestione salidas directamente desde la lista de gestión.
-        </p>
       </div>
 
       <Tabs defaultValue="crear" className="space-y-4">

@@ -14,9 +14,6 @@ export const ConfiguracionPage = ({ initialTab = "general" }) => {
     <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-3xl font-bold mb-2">Configuración del Sistema</h1>
-        <p className="text-muted-foreground">
-          Configure los parametros generales, tarifas y capacidad de espacios
-        </p>
       </div>
 
       {loading ? (

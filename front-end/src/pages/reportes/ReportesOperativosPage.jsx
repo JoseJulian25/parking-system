@@ -15,7 +15,7 @@ import {
   getEntradasPorHora,
   getSalidasPorHora,
   getTicketsActivosReporte,
-  getEstadiasLargas,
+  getEstadiasLargasFiltrado,
 } from "../../api/reportesOperativos";
 import { getReportesErrorMessage } from "../../api/reportesUtils";
 import { getUsuarios } from "../../api/usuarios";
@@ -98,13 +98,14 @@ export const ReportesOperativosPage = () => {
         fechaDesde: toApiLocalDateTime(fechaDesde),
         fechaHasta: toApiLocalDateTime(fechaHasta),
         usuarioId: usuarioSeleccionado !== "TODOS" ? Number(usuarioSeleccionado) : undefined,
+        tipoVehiculo: tipoVehiculo !== "TODOS" ? tipoVehiculo : undefined,
       };
 
       const [entradasResp, salidasResp, ticketsResp, estadiasResp] = await Promise.all([
         getEntradasPorHora(params),
         getSalidasPorHora(params),
-        getTicketsActivosReporte({ usuarioId: params.usuarioId }),
-        getEstadiasLargas(360, params.usuarioId),
+        getTicketsActivosReporte({ usuarioId: params.usuarioId, tipoVehiculo: params.tipoVehiculo }),
+        getEstadiasLargasFiltrado({ umbralMinutos: 360, usuarioId: params.usuarioId, tipoVehiculo: params.tipoVehiculo }),
       ]);
 
       setEntradasSerie(normalizeSeries(entradasResp?.items));
@@ -152,13 +153,7 @@ export const ReportesOperativosPage = () => {
     }));
   }, [entradasSerie, salidasSerie]);
 
-  const ticketsFiltrados = useMemo(() => {
-    if (tipoVehiculo === "TODOS") return ticketsActivos;
-    return ticketsActivos.filter((fila) => {
-      const tipo = String(fila?.columnas?.tipoVehiculo || "").toUpperCase();
-      return tipo === tipoVehiculo;
-    });
-  }, [ticketsActivos, tipoVehiculo]);
+  const ticketsFiltrados = useMemo(() => ticketsActivos, [ticketsActivos]);
 
   const entradasTotal = useMemo(
     () => chartData.reduce((acc, row) => acc + Number(row.entradas || 0), 0),
@@ -193,28 +188,26 @@ export const ReportesOperativosPage = () => {
         usuarioSeleccionado={usuarioSeleccionado}
         onUsuarioSeleccionadoChange={setUsuarioSeleccionado}
         usuarios={usuarios}
+        extraFilters={(
+          <div className="space-y-1">
+            <label className="reportes-field-label">Tipo de vehiculo</label>
+            <Select value={tipoVehiculo} onValueChange={setTipoVehiculo}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="Tipo de vehiculo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos los tipos</SelectItem>
+                <SelectItem value="CARRO">Carro</SelectItem>
+                <SelectItem value="MOTO">Moto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        additionalFiltersCount={1}
         onLimpiar={limpiarFiltros}
         onActualizar={cargarDatos}
         loading={loading}
       />
-
-      <div className="rounded-lg border bg-card p-3">
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-          <Select value={tipoVehiculo} onValueChange={setTipoVehiculo}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tipo de vehiculo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TODOS">Todos los tipos</SelectItem>
-              <SelectItem value="CARRO">Carro</SelectItem>
-              <SelectItem value="MOTO">Moto</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="text-xs text-muted-foreground flex items-center">
-            Segmentación local: tipo de vehículo
-          </div>
-        </div>
-      </div>
 
       <ReportesFetchState
         loading={loading && !hasLoadedOnce}
@@ -225,25 +218,25 @@ export const ReportesOperativosPage = () => {
       />
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Entradas</p>
           <p className="text-lg font-semibold text-primary">{entradasTotal}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Salidas</p>
           <p className="text-lg font-semibold">{salidasTotal}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Tickets activos</p>
           <p className="text-lg font-semibold">{ticketsFiltrados.length}</p>
         </div>
-        <div className="rounded-md border px-3 py-2">
+        <div className="reportes-kpi">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Estadias largas</p>
           <p className="text-lg font-semibold">{estadiasLargas.length}</p>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <h2 className="mb-2 text-sm font-semibold">Entradas vs Salidas por hora</h2>
         {!chartData.length ? (
           <div className="flex h-72 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
@@ -266,7 +259,7 @@ export const ReportesOperativosPage = () => {
         )}
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="reportes-panel">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Tickets activos</h2>
           <span className="text-xs text-muted-foreground">
@@ -274,7 +267,7 @@ export const ReportesOperativosPage = () => {
           </span>
         </div>
 
-        <Table className="text-xs">
+        <Table className="reportes-table">
           <TableHeader>
             <TableRow>
               <TableHead className="h-9 px-2">Ticket</TableHead>

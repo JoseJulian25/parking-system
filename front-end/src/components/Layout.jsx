@@ -68,11 +68,11 @@ export const Layout = () => {
 
   const MenuContent = ({ closeOnNavigate = false }) => (
     <div className="flex h-full flex-col">
-      <div className="border-b p-6">
+      <div className="border-b border-white/15 p-5">
         <div className="flex items-center gap-2">
           <img src="/icon.png" alt="SmartPark" className="h-10 w-10 text-white" />
           <div>
-            <h1 className="font-semibold">SmartPark</h1>
+            <h1 className="text-sm font-semibold tracking-wide">SmartPark</h1>
           </div>
         </div>
       </div>
@@ -97,8 +97,8 @@ export const Layout = () => {
                 <button
                   type="button"
                   onClick={toggleSection}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
-                    isConfigSectionActive ? "bg-primary text-primary-foreground" : "text-gray-700 hover:bg-slate-200/70"
+                  className={`app-sidebar-item flex w-full items-center gap-3 ${
+                    isConfigSectionActive ? "app-sidebar-item-active" : "app-sidebar-item-idle"
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -107,7 +107,7 @@ export const Layout = () => {
                 </button>
 
                 {isOpen && (
-                  <div className="ml-4 space-y-1 border-l border-slate-200 pl-3">
+                  <div className="ml-4 space-y-1 border-l border-white/20 pl-3">
                     {item.children.map((child) => {
                       const ChildIcon = child.icon;
                       return (
@@ -120,10 +120,10 @@ export const Layout = () => {
                             }
                           }}
                           className={({ isActive }) =>
-                            `flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                            `app-sidebar-subitem flex items-center gap-2 ${
                               isActive
-                                ? "bg-primary/10 text-primary"
-                                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                ? "app-sidebar-subitem-active"
+                                : "app-sidebar-subitem-idle"
                             }`
                           }
                         >
@@ -148,7 +148,7 @@ export const Layout = () => {
                 }
               }}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-gray-700 hover:bg-slate-200/70"
+                `app-sidebar-item flex items-center gap-3 ${isActive ? "app-sidebar-item-active" : "app-sidebar-item-idle"
                 }`
               }
             >
@@ -159,13 +159,13 @@ export const Layout = () => {
         })}
       </nav>
 
-      <div className="border-t p-4">
+      <div className="border-t border-white/15 p-4">
         <div className="mb-3 px-1">
-          <p className="text-sm font-medium">{user?.nombre || "Usuario"}</p>
-          <p className="text-xs capitalize text-muted-foreground">{userRole || "sin rol"}</p>
+          <p className="text-sm font-medium text-slate-100">{user?.nombre || "Usuario"}</p>
+          <p className="text-xs capitalize text-slate-300">{userRole || "sin rol"}</p>
         </div>
 
-        <Button variant="outline" className="w-full" onClick={logout}>
+        <Button variant="outline" className="w-full border-white/30 bg-white/10 text-slate-100 hover:bg-white/20 hover:text-white" onClick={logout}>
           <LogOut className="mr-2 h-4 w-4" />
           Cerrar Sesion
         </Button>
@@ -174,8 +174,8 @@ export const Layout = () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 border-r bg-card md:flex md:flex-col">
+    <div className="app-shell flex min-h-screen">
+      <aside className="app-sidebar hidden w-64 md:flex md:flex-col">
         <MenuContent />
       </aside>
 
@@ -185,14 +185,16 @@ export const Layout = () => {
             <Menu className="h-6 w-6" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 bg-card p-0">
+        <SheetContent side="left" className="app-sidebar w-64 p-0">
           <MenuContent closeOnNavigate />
         </SheetContent>
       </Sheet>
 
       <main className="flex-1 overflow-auto">
-        <div className="p-4 pt-20 md:p-8 md:pt-8">
+        <div className="p-3 pt-16 md:p-6 md:pt-6">
+          <div className="app-content-wrap">
           <Outlet />
+          </div>
         </div>
       </main>
     </div>

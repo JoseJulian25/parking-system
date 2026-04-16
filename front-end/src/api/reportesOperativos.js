@@ -28,3 +28,10 @@ export const getEstadiasLargas = async (umbralMinutos, usuarioId) => {
   });
   return data;
 };
+
+export const getEstadiasLargasFiltrado = async ({ umbralMinutos, usuarioId, tipoVehiculo } = {}) => {
+  const { data } = await client.get("/reportes/operativos/estadias-largas", {
+    params: buildParams({ umbralMinutos, usuarioId, tipoVehiculo }),
+  });
+  return data;
+};
