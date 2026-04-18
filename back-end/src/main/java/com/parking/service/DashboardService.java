@@ -1,5 +1,6 @@
 package com.parking.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -18,14 +19,16 @@ public class DashboardService {
     private static final String ESTADO_TICKET_ANULADO = "ANULADO";
 
     private final TicketRepository ticketRepository;
+    private final Clock appClock;
 
-    public DashboardService(TicketRepository ticketRepository) {
+    public DashboardService(TicketRepository ticketRepository, Clock appClock) {
         this.ticketRepository = ticketRepository;
+        this.appClock = appClock;
     }
 
     @Transactional(readOnly = true)
     public List<DashboardMovimientoHoraDTO> obtenerMovimientosHoy() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(appClock);
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 

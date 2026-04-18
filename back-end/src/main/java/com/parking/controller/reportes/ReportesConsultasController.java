@@ -1,6 +1,6 @@
 package com.parking.controller.reportes;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +38,8 @@ public class ReportesConsultasController {
 
     @GetMapping("/tickets")
     public ResponseEntity<ReporteTablaResponseDTO> listadoTicketsPorFecha(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         return ResponseEntity.ok(consultasReportService.obtenerListadoTicketsPorFecha(fechaDesde, fechaHasta, page, size));
@@ -53,8 +53,8 @@ public class ReportesConsultasController {
 
     @GetMapping("/reservas")
     public ResponseEntity<ReporteTablaResponseDTO> listadoReservasPorFecha(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         return ResponseEntity.ok(consultasReportService.obtenerListadoReservasPorFecha(fechaDesde, fechaHasta, page, size));
@@ -68,8 +68,8 @@ public class ReportesConsultasController {
 
     @GetMapping("/pagos")
     public ResponseEntity<ReporteTablaResponseDTO> listadoPagosPorFecha(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         return ResponseEntity.ok(consultasReportService.obtenerListadoPagosPorFecha(fechaDesde, fechaHasta, page, size));
@@ -77,8 +77,8 @@ public class ReportesConsultasController {
 
     @GetMapping("/vehiculos")
     public ResponseEntity<ReporteTablaResponseDTO> listadoVehiculosPorFecha(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         return ResponseEntity.ok(consultasReportService.obtenerListadoVehiculosPorFecha(fechaDesde, fechaHasta, page, size));

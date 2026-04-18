@@ -14,6 +14,7 @@ import {
   getConsultasTicketsPorFecha,
   getConsultasVehiculosPorFecha,
 } from "../../api/reportesConsultas";
+import { toApiOffsetDateTime } from "../../api/reportesCommon";
 import { getReportesErrorMessage } from "../../api/reportesUtils";
 import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
 import { ReportesPageShell } from "../../components/reportes/ReportesPageShell";
@@ -54,11 +55,6 @@ const startOfTodayInput = () => {
 };
 
 const nowInput = () => toLocalDateTimeInput(new Date());
-
-const toApiLocalDateTime = (value) => {
-  if (!value) return undefined;
-  return value.length === 16 ? `${value}:00` : value;
-};
 
 const PAGE_SIZE = 20;
 
@@ -254,8 +250,8 @@ export const ReportesConsultasPage = () => {
 
   const baseParams = useMemo(
     () => ({
-      fechaDesde: toApiLocalDateTime(fechaDesde),
-      fechaHasta: toApiLocalDateTime(fechaHasta),
+      fechaDesde: toApiOffsetDateTime(fechaDesde),
+      fechaHasta: toApiOffsetDateTime(fechaHasta),
     }),
     [fechaDesde, fechaHasta]
   );

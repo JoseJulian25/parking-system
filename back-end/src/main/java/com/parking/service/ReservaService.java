@@ -1,20 +1,20 @@
 package com.parking.service;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
-import java.time.LocalDateTime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.parking.dto.ReservaCreateDTO;
 import com.parking.dto.ReservaCancelacionDTO;
+import com.parking.dto.ReservaCreateDTO;
 import com.parking.dto.ReservaResponseDTO;
 import com.parking.entity.Espacio;
 import com.parking.entity.EstadoEspacio;
@@ -48,6 +48,7 @@ public class ReservaService {
     private final TipoVehiculoRepository tipoVehiculoRepository;
     private final UsuarioRepository usuarioRepository;
     private final ReservaEmailService reservaEmailService;
+    private final Clock appClock;
 
     public ReservaService(ReservaRepository reservaRepository,
             EstadoReservaRepository estadoReservaRepository,
@@ -55,7 +56,8 @@ public class ReservaService {
             EstadoEspacioRepository estadoEspacioRepository,
             TipoVehiculoRepository tipoVehiculoRepository,
             UsuarioRepository usuarioRepository,
-            ReservaEmailService reservaEmailService) {
+            ReservaEmailService reservaEmailService,
+            Clock appClock) {
         this.reservaRepository = reservaRepository;
         this.estadoReservaRepository = estadoReservaRepository;
         this.espacioRepository = espacioRepository;
@@ -63,6 +65,7 @@ public class ReservaService {
         this.tipoVehiculoRepository = tipoVehiculoRepository;
         this.usuarioRepository = usuarioRepository;
         this.reservaEmailService = reservaEmailService;
+        this.appClock = appClock;
     }
 
     @Transactional(readOnly = true)
@@ -163,7 +166,7 @@ public class ReservaService {
 
         reserva.setEstado(estadoCancelada);
         reserva.setMotivoCancelacion(normalize(dto.getMotivoCancelacion()));
-        reserva.setHoraFin(LocalDateTime.now());
+        reserva.setHoraFin(LocalDateTime.now(appClock));
         reserva.setCanceladoPor(obtenerUsuarioAutenticado());
         Reserva actualizada = reservaRepository.save(reserva);
 

@@ -21,6 +21,10 @@ import {
   getRankingHorasPicoPorIngreso,
 } from "../../api/reportesFinancieros";
 import {
+  toApiOffsetDateTime,
+  toApiOffsetDateTimeFromDate,
+} from "../../api/reportesCommon";
+import {
   getReportesErrorMessage,
   transformIndicadoresFinancieros,
   transformSerieTemporalToChart,
@@ -55,21 +59,6 @@ const startOfTodayInput = () => {
 };
 
 const nowInput = () => toLocalDateTimeInput(new Date());
-
-const toApiLocalDateTime = (value) => {
-  if (!value) return undefined;
-  return value.length === 16 ? `${value}:00` : value;
-};
-
-const formatApiLocalDateTimeFromDate = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
 
 const toNumber = (value) => {
   const parsed = Number(value);
@@ -154,8 +143,8 @@ export const ReportesFinancierosPage = () => {
       setLoading(true);
 
       const params = {
-        fechaDesde: toApiLocalDateTime(fechaDesde),
-        fechaHasta: toApiLocalDateTime(fechaHasta),
+        fechaDesde: toApiOffsetDateTime(fechaDesde),
+        fechaHasta: toApiOffsetDateTime(fechaHasta),
         granularidad: normalizarGranularidadFinanciera(granularidad),
       };
 
@@ -185,8 +174,8 @@ export const ReportesFinancierosPage = () => {
       const inicioAnterior = new Date(finAnterior.getTime() - rangoMs);
 
       const ingresosPrevResp = await getIngresosPorPeriodo({
-        fechaDesde: formatApiLocalDateTimeFromDate(inicioAnterior),
-        fechaHasta: formatApiLocalDateTimeFromDate(finAnterior),
+        fechaDesde: toApiOffsetDateTimeFromDate(inicioAnterior),
+        fechaHasta: toApiOffsetDateTimeFromDate(finAnterior),
         granularidad: normalizarGranularidadFinanciera(granularidad),
       });
 

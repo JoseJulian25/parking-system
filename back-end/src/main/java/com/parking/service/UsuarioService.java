@@ -1,6 +1,7 @@
 package com.parking.service;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
@@ -24,15 +25,18 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final Clock appClock;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
             RolRepository rolRepository,
-            BCryptPasswordEncoder passwordEncoder
+            BCryptPasswordEncoder passwordEncoder,
+            Clock appClock
     ) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.passwordEncoder = passwordEncoder;
+        this.appClock = appClock;
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +115,7 @@ public class UsuarioService {
 
         usuario.setActivo(false);
         usuario.setEliminado(true);
-        usuario.setFechaEliminacion(LocalDateTime.now());
+        usuario.setFechaEliminacion(LocalDateTime.now(appClock));
         usuarioRepository.save(usuario);
     }
 

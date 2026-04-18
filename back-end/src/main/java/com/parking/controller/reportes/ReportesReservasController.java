@@ -1,6 +1,6 @@
 package com.parking.controller.reportes;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -25,8 +25,8 @@ public class ReportesReservasController {
 
     @GetMapping("/por-estado")
     public ResponseEntity<ReporteResumenKpiResponseDTO> reservasPorEstado(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta) {
         return ResponseEntity.ok(reservasReportService.obtenerReservasPorEstado(fechaDesde, fechaHasta));
     }
 
@@ -38,8 +38,8 @@ public class ReportesReservasController {
 
     @GetMapping("/cancelaciones/detalle")
     public ResponseEntity<ReporteTablaResponseDTO> cancelacionesDetalle(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         return ResponseEntity.ok(reservasReportService.obtenerCancelacionesDetalle(fechaDesde, fechaHasta, page, size));

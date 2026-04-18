@@ -2,6 +2,7 @@ package com.parking.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
@@ -57,6 +58,7 @@ public class SalidaService {
     private final ReservaRepository reservaRepository;
     private final EstadoReservaRepository estadoReservaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final Clock appClock;
 
     public SalidaService(
             EspacioRepository espacioRepository,
@@ -67,7 +69,8 @@ public class SalidaService {
             EstadoEspacioRepository estadoEspacioRepository,
             ReservaRepository reservaRepository,
             EstadoReservaRepository estadoReservaRepository,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            Clock appClock) {
         this.espacioRepository = espacioRepository;
         this.ticketRepository = ticketRepository;
         this.tarifaRepository = tarifaRepository;
@@ -77,6 +80,7 @@ public class SalidaService {
         this.reservaRepository = reservaRepository;
         this.estadoReservaRepository = estadoReservaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.appClock = appClock;
     }
 
     @Transactional(readOnly = true)
@@ -85,7 +89,7 @@ public class SalidaService {
                 .orElseThrow(() -> new NoSuchElementException("Espacio no encontrado o inactivo"));
 
         Ticket ticket = obtenerTicketActivoPorEspacio(espacio.getId());
-        ResumenCalculo calculo = calcularMonto(ticket, LocalDateTime.now());
+        ResumenCalculo calculo = calcularMonto(ticket, LocalDateTime.now(appClock));
 
         return new SalidaResumenDTO(
                 espacio.getId(),
@@ -104,7 +108,7 @@ public class SalidaService {
                 .orElseThrow(() -> new NoSuchElementException("Espacio no encontrado o inactivo"));
 
         Ticket ticket = obtenerTicketActivoPorEspacio(espacio.getId());
-        LocalDateTime horaSalida = LocalDateTime.now();
+        LocalDateTime horaSalida = LocalDateTime.now(appClock);
         ResumenCalculo calculo = calcularMonto(ticket, horaSalida);
 
         String metodoPago = normalize(dto.getMetodoPago()).toUpperCase(Locale.ROOT);

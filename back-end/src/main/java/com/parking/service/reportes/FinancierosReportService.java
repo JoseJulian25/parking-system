@@ -2,9 +2,9 @@ package com.parking.service.reportes;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.LinkedHashMap;
@@ -26,6 +26,8 @@ import com.parking.dto.ReporteTopNResponseDTO;
 import com.parking.entity.Pago;
 import com.parking.entity.Ticket;
 import com.parking.repository.PagoRepository;
+import com.parking.service.reportes.common.ReportesCommonService;
+import com.parking.service.reportes.common.ReportesCommonService.RangoFechas;
 
 @Service
 public class FinancierosReportService {
@@ -35,15 +37,19 @@ public class FinancierosReportService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final PagoRepository pagoRepository;
+    private final ReportesCommonService commonService;
 
-    public FinancierosReportService(PagoRepository pagoRepository) {
+    public FinancierosReportService(
+            PagoRepository pagoRepository,
+            ReportesCommonService commonService) {
         this.pagoRepository = pagoRepository;
+        this.commonService = commonService;
     }
 
     @Transactional(readOnly = true)
     public ReporteSerieTemporalResponseDTO obtenerIngresosPorPeriodo(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             String granularidad) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
         String granularidadNormalizada = normalizarGranularidad(granularidad);
@@ -67,7 +73,7 @@ public class FinancierosReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReporteFinancieroResponseDTO obtenerPromediosFinancieros(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+    public ReporteFinancieroResponseDTO obtenerPromediosFinancieros(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
         List<Pago> pagos = obtenerPagosEnRango(rango);
 
@@ -115,7 +121,7 @@ public class FinancierosReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReporteTablaResponseDTO obtenerIngresosPorTipoVehiculo(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+    public ReporteTablaResponseDTO obtenerIngresosPorTipoVehiculo(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
         List<Pago> pagos = obtenerPagosEnRango(rango);
 
@@ -150,7 +156,7 @@ public class FinancierosReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReporteTablaResponseDTO obtenerIngresosPorMetodoPago(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+    public ReporteTablaResponseDTO obtenerIngresosPorMetodoPago(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
         List<Pago> pagos = obtenerPagosEnRango(rango);
 
@@ -180,8 +186,8 @@ public class FinancierosReportService {
 
     @Transactional(readOnly = true)
     public ReporteTopNResponseDTO obtenerRankingHorasPicoPorIngreso(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             Integer limite) {
         RangoFechas rango = resolverRango(fechaDesde, fechaHasta);
         int limiteNormalizado = limite == null ? 5 : Math.min(Math.max(limite, 1), 24);
@@ -228,40 +234,8 @@ public class FinancierosReportService {
                 itemsConPosicion);
     }
 
-    private RangoFechas resolverRango(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
-        RangoFechas rango;
-        if (fechaDesde != null && fechaHasta != null) {
-            if (fechaHasta.isBefore(fechaDesde)) {
-                throw new IllegalArgumentException("fechaHasta no puede ser menor que fechaDesde");
-            }
-            rango = new RangoFechas(fechaDesde, fechaHasta);
-            validarRangoMaximo(rango);
-            return rango;
-        }
-
-        if (fechaDesde != null) {
-            rango = new RangoFechas(fechaDesde, fechaDesde.plusDays(1));
-            validarRangoMaximo(rango);
-            return rango;
-        }
-
-        if (fechaHasta != null) {
-            rango = new RangoFechas(fechaHasta.minusDays(1), fechaHasta);
-            validarRangoMaximo(rango);
-            return rango;
-        }
-
-        LocalDate today = LocalDate.now();
-        rango = new RangoFechas(today.atStartOfDay(), today.plusDays(1).atStartOfDay());
-        validarRangoMaximo(rango);
-        return rango;
-    }
-
-    private void validarRangoMaximo(RangoFechas rango) {
-        long dias = Duration.between(rango.fechaDesde(), rango.fechaHasta()).toDays();
-        if (dias > MAX_RANGE_DIAS) {
-            throw new IllegalArgumentException("El rango maximo permitido es de " + MAX_RANGE_DIAS + " dias");
-        }
+    private RangoFechas resolverRango(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta) {
+        return commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
     }
 
     private String formatDateTime(LocalDateTime value) {
@@ -332,6 +306,4 @@ public class FinancierosReportService {
         return value == null ? "" : value.trim();
     }
 
-    private record RangoFechas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
-    }
 }

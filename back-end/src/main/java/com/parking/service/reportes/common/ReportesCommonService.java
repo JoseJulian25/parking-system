@@ -1,8 +1,10 @@
 package com.parking.service.reportes.common;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -13,6 +15,11 @@ import org.springframework.stereotype.Service;
 public class ReportesCommonService {
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private final Clock appClock;
+
+    public ReportesCommonService(Clock appClock) {
+        this.appClock = appClock;
+    }
 
     public String formatDateTime(LocalDateTime value) {
         if (value == null) {
@@ -37,33 +44,43 @@ public class ReportesCommonService {
         return motivo.trim();
     }
 
-    public RangoFechas resolverRango(LocalDateTime fechaDesde, LocalDateTime fechaHasta, int maxRangeDias) {
+    public RangoFechas resolverRango(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta, int maxRangeDias) {
+        LocalDateTime desdeLocal = toBusinessLocalDateTime(fechaDesde);
+        LocalDateTime hastaLocal = toBusinessLocalDateTime(fechaHasta);
+
         RangoFechas rango;
-        if (fechaDesde != null && fechaHasta != null) {
-            if (fechaHasta.isBefore(fechaDesde)) {
+        if (desdeLocal != null && hastaLocal != null) {
+            if (hastaLocal.isBefore(desdeLocal)) {
                 throw new IllegalArgumentException("fechaHasta no puede ser menor que fechaDesde");
             }
-            rango = new RangoFechas(fechaDesde, fechaHasta);
+            rango = new RangoFechas(desdeLocal, hastaLocal);
             validarRangoMaximo(rango, maxRangeDias);
             return rango;
         }
 
-        if (fechaDesde != null) {
-            rango = new RangoFechas(fechaDesde, fechaDesde.plusDays(1));
+        if (desdeLocal != null) {
+            rango = new RangoFechas(desdeLocal, desdeLocal.plusDays(1));
             validarRangoMaximo(rango, maxRangeDias);
             return rango;
         }
 
-        if (fechaHasta != null) {
-            rango = new RangoFechas(fechaHasta.minusDays(1), fechaHasta);
+        if (hastaLocal != null) {
+            rango = new RangoFechas(hastaLocal.minusDays(1), hastaLocal);
             validarRangoMaximo(rango, maxRangeDias);
             return rango;
         }
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(appClock);
         rango = new RangoFechas(today.atStartOfDay(), today.plusDays(1).atStartOfDay());
         validarRangoMaximo(rango, maxRangeDias);
         return rango;
+    }
+
+    private LocalDateTime toBusinessLocalDateTime(OffsetDateTime value) {
+        if (value == null) {
+            return null;
+        }
+        return value.atZoneSameInstant(appClock.getZone()).toLocalDateTime();
     }
 
     public <T> List<T> paginarFilas(List<T> filas, Integer page, Integer size, int defaultPage, int defaultSize, int maxSize) {

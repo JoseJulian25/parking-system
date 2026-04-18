@@ -17,6 +17,7 @@ import {
   getTicketsActivosReporte,
   getEstadiasLargasFiltrado,
 } from "../../api/reportesOperativos";
+import { toApiOffsetDateTime } from "../../api/reportesCommon";
 import { getReportesErrorMessage } from "../../api/reportesUtils";
 import { getUsuarios } from "../../api/usuarios";
 import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
@@ -62,11 +63,6 @@ const normalizeSeries = (items = []) => {
   }));
 };
 
-const toApiLocalDateTime = (value) => {
-  if (!value) return undefined;
-  return value.length === 16 ? `${value}:00` : value;
-};
-
 export const ReportesOperativosPage = () => {
   const [fechaDesde, setFechaDesde] = useState(startOfTodayInput());
   const [fechaHasta, setFechaHasta] = useState(nowInput());
@@ -95,8 +91,8 @@ export const ReportesOperativosPage = () => {
       setCanRetry(false);
       setLoading(true);
       const params = {
-        fechaDesde: toApiLocalDateTime(fechaDesde),
-        fechaHasta: toApiLocalDateTime(fechaHasta),
+        fechaDesde: toApiOffsetDateTime(fechaDesde),
+        fechaHasta: toApiOffsetDateTime(fechaHasta),
         usuarioId: usuarioSeleccionado !== "TODOS" ? Number(usuarioSeleccionado) : undefined,
         tipoVehiculo: tipoVehiculo !== "TODOS" ? tipoVehiculo : undefined,
       };

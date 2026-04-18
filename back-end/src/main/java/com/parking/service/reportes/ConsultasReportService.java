@@ -2,6 +2,7 @@ package com.parking.service.reportes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -189,8 +190,8 @@ public class ConsultasReportService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerListadoTicketsPorFecha(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             Integer page,
             Integer size) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
@@ -224,8 +225,8 @@ public class ConsultasReportService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerListadoReservasPorFecha(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             Integer page,
             Integer size) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
@@ -258,8 +259,8 @@ public class ConsultasReportService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerListadoPagosPorFecha(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             Integer page,
             Integer size) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
@@ -320,8 +321,8 @@ public class ConsultasReportService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerListadoVehiculosPorFecha(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             Integer page,
             Integer size) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);

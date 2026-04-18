@@ -15,6 +15,7 @@ import {
   getTendenciaUsoPorEspacio,
   getUtilizacionPorEspacio,
 } from "../../api/reportesOcupacion";
+import { toApiOffsetDateTime } from "../../api/reportesCommon";
 import { getReportesErrorMessage } from "../../api/reportesUtils";
 import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
 import { ReportesFetchState } from "../../components/reportes/ReportesFetchState";
@@ -45,11 +46,6 @@ const startOfTodayInput = () => {
 
 const nowInput = () => toLocalDateTimeInput(new Date());
 
-const toApiLocalDateTime = (value) => {
-  if (!value) return undefined;
-  return value.length === 16 ? `${value}:00` : value;
-};
-
 const toNumber = (value) => Number(value || 0);
 
 const LINE_COLORS = ["#0f172a", "#0ea5e9", "#16a34a", "#f59e0b", "#ef4444", "#7c3aed", "#14b8a6", "#e11d48"];
@@ -77,8 +73,8 @@ export const ReportesOcupacionPage = () => {
       setCanRetry(false);
       setLoading(true);
       const paramsRango = {
-        fechaDesde: toApiLocalDateTime(fechaDesde),
-        fechaHasta: toApiLocalDateTime(fechaHasta),
+        fechaDesde: toApiOffsetDateTime(fechaDesde),
+        fechaHasta: toApiOffsetDateTime(fechaHasta),
       };
 
       const [utilizacionResp, tendenciaResp] = await Promise.all([

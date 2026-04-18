@@ -1,6 +1,6 @@
 package com.parking.controller.reportes;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -25,8 +25,8 @@ public class ReportesOperativosController {
 
     @GetMapping("/entradas-por-hora")
     public ResponseEntity<ReporteSerieTemporalResponseDTO> entradasPorHora(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Long usuarioId,
             @RequestParam(required = false) String tipoVehiculo) {
         return ResponseEntity.ok(operativosReportService.obtenerEntradasPorHora(fechaDesde, fechaHasta, usuarioId, tipoVehiculo));
@@ -34,8 +34,8 @@ public class ReportesOperativosController {
 
     @GetMapping("/salidas-por-hora")
     public ResponseEntity<ReporteSerieTemporalResponseDTO> salidasPorHora(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Long usuarioId,
             @RequestParam(required = false) String tipoVehiculo) {
         return ResponseEntity.ok(operativosReportService.obtenerSalidasPorHora(fechaDesde, fechaHasta, usuarioId, tipoVehiculo));

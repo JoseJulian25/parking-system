@@ -16,6 +16,7 @@ import {
   getReservasPorEstadoReporte,
   getReservasProximasReporte,
 } from "../../api/reportesReservas";
+import { toApiOffsetDateTime } from "../../api/reportesCommon";
 import { getReportesErrorMessage } from "../../api/reportesUtils";
 import { getUsuarios } from "../../api/usuarios";
 import { ReportesContextBar } from "../../components/reportes/ReportesContextBar";
@@ -46,11 +47,6 @@ const startOfTodayInput = () => {
 };
 
 const nowInput = () => toLocalDateTimeInput(new Date());
-
-const toApiLocalDateTime = (value) => {
-  if (!value) return undefined;
-  return value.length === 16 ? `${value}:00` : value;
-};
 
 const toNumber = (value) => Number(value || 0);
 
@@ -89,8 +85,8 @@ export const ReportesReservasPage = () => {
       setCanRetry(false);
       setLoading(true);
       const paramsRango = {
-        fechaDesde: toApiLocalDateTime(fechaDesde),
-        fechaHasta: toApiLocalDateTime(fechaHasta),
+        fechaDesde: toApiOffsetDateTime(fechaDesde),
+        fechaHasta: toApiOffsetDateTime(fechaHasta),
       };
 
       const [estadoResp, cancelacionesResp, proximasResp] = await Promise.all([

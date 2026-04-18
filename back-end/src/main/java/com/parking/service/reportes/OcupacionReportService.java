@@ -1,6 +1,7 @@
 package com.parking.service.reportes;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.temporal.WeekFields;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -42,7 +43,7 @@ public class OcupacionReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReporteTablaResponseDTO obtenerUtilizacionBasicaPorEspacio(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        public ReporteTablaResponseDTO obtenerUtilizacionBasicaPorEspacio(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
         List<Espacio> espacios = espacioRepository.findAll();
         List<Ticket> tickets = ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
@@ -76,8 +77,8 @@ public class OcupacionReportService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerTendenciaUsoPorEspacio(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             String granularidad,
             Integer limiteEspacios) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);

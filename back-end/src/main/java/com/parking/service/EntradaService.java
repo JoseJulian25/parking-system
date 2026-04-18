@@ -1,5 +1,6 @@
 package com.parking.service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.NoSuchElementException;
@@ -43,6 +44,7 @@ public class EntradaService {
     private final TicketRepository ticketRepository;
     private final EstadoTicketRepository estadoTicketRepository;
     private final UsuarioRepository usuarioRepository;
+    private final Clock appClock;
 
     public EntradaService(
             EspacioRepository espacioRepository,
@@ -51,7 +53,8 @@ public class EntradaService {
             ReservaRepository reservaRepository,
             TicketRepository ticketRepository,
             EstadoTicketRepository estadoTicketRepository,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            Clock appClock) {
         this.espacioRepository = espacioRepository;
         this.estadoEspacioRepository = estadoEspacioRepository;
         this.tipoVehiculoRepository = tipoVehiculoRepository;
@@ -59,6 +62,7 @@ public class EntradaService {
         this.ticketRepository = ticketRepository;
         this.estadoTicketRepository = estadoTicketRepository;
         this.usuarioRepository = usuarioRepository;
+        this.appClock = appClock;
     }
 
     @Transactional
@@ -114,7 +118,7 @@ public class EntradaService {
         ticket.setPlaca(placa);
         ticket.setTipoVehiculo(tipoVehiculo);
         ticket.setEspacio(espacio);
-        ticket.setHoraEntrada(LocalDateTime.now());
+        ticket.setHoraEntrada(LocalDateTime.now(appClock));
         ticket.setEstado(estadoTicketActivo);
         ticket.setCreadoPor(obtenerUsuarioAutenticado());
 
@@ -161,7 +165,7 @@ public class EntradaService {
                 .orElseThrow(() -> new NoSuchElementException("Estado de espacio LIBRE no encontrado"));
 
         ticket.setEstado(estadoTicketAnulado);
-        ticket.setHoraSalida(LocalDateTime.now());
+        ticket.setHoraSalida(LocalDateTime.now(appClock));
         ticket.setMontoTotal(null);
         Ticket actualizado = ticketRepository.save(ticket);
 

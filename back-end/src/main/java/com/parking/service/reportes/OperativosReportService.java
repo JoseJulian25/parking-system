@@ -1,8 +1,10 @@
 package com.parking.service.reportes;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -30,16 +32,19 @@ public class OperativosReportService {
 
     private final TicketRepository ticketRepository;
     private final ReportesCommonService commonService;
+    private final Clock appClock;
 
     public OperativosReportService(
             TicketRepository ticketRepository,
-            ReportesCommonService commonService) {
+            ReportesCommonService commonService,
+            Clock appClock) {
         this.ticketRepository = ticketRepository;
         this.commonService = commonService;
+        this.appClock = appClock;
     }
 
     @Transactional(readOnly = true)
-    public ReporteSerieTemporalResponseDTO obtenerEntradasPorHora(LocalDateTime fechaDesde, LocalDateTime fechaHasta, Long usuarioId, String tipoVehiculo) {
+    public ReporteSerieTemporalResponseDTO obtenerEntradasPorHora(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta, Long usuarioId, String tipoVehiculo) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
         List<Ticket> tickets = filtrarPorUsuarioYTipo(
             ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
@@ -56,7 +61,7 @@ public class OperativosReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReporteSerieTemporalResponseDTO obtenerSalidasPorHora(LocalDateTime fechaDesde, LocalDateTime fechaHasta, Long usuarioId, String tipoVehiculo) {
+    public ReporteSerieTemporalResponseDTO obtenerSalidasPorHora(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta, Long usuarioId, String tipoVehiculo) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
         List<Ticket> tickets = filtrarPorUsuarioYTipo(
             ticketRepository.findAllByHoraSalidaGreaterThanEqualAndHoraSalidaLessThan(
@@ -111,7 +116,7 @@ public class OperativosReportService {
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerEstadiasLargas(Integer umbralMinutos, Long usuarioId, String tipoVehiculo) {
         int umbral = umbralMinutos == null || umbralMinutos < 1 ? 360 : umbralMinutos;
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(appClock);
 
         List<Ticket> activos = filtrarPorUsuarioYTipo(ticketRepository.findAll(), usuarioId, tipoVehiculo).stream()
                 .filter(ticket -> ticket.getEstado() != null)

@@ -1,7 +1,9 @@
 package com.parking.service.reportes;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,16 +34,19 @@ public class ReservasReportService {
 
     private final ReservaRepository reservaRepository;
     private final ReportesCommonService commonService;
+        private final Clock appClock;
 
     public ReservasReportService(
             ReservaRepository reservaRepository,
-            ReportesCommonService commonService) {
+                        ReportesCommonService commonService,
+                        Clock appClock) {
         this.reservaRepository = reservaRepository;
         this.commonService = commonService;
+                this.appClock = appClock;
     }
 
     @Transactional(readOnly = true)
-    public ReporteResumenKpiResponseDTO obtenerReservasPorEstado(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        public ReporteResumenKpiResponseDTO obtenerReservasPorEstado(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
         List<Reserva> reservas = obtenerReservasCreadasEnRango(rango);
 
@@ -62,7 +67,7 @@ public class ReservasReportService {
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerReservasProximas(Integer proximosMinutos) {
         int minutos = proximosMinutos == null || proximosMinutos < 1 ? 30 : proximosMinutos;
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(appClock);
         LocalDateTime limite = now.plusMinutes(minutos);
 
         List<Reserva> reservasProximas = reservaRepository.findAllByOrderByFechaCreacionDesc().stream()
@@ -92,8 +97,8 @@ public class ReservasReportService {
 
     @Transactional(readOnly = true)
     public ReporteTablaResponseDTO obtenerCancelacionesDetalle(
-            LocalDateTime fechaDesde,
-            LocalDateTime fechaHasta,
+            OffsetDateTime fechaDesde,
+            OffsetDateTime fechaHasta,
             Integer page,
             Integer size) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
