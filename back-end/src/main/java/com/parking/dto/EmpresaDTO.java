@@ -13,9 +13,8 @@ public class EmpresaDTO {
     @Size(max = 120, message = "El nombre no puede exceder 120 caracteres")
     private String nombre;
 
-    @NotBlank(message = "El RNC es requerido")
     @Size(max = 20, message = "El RNC no puede exceder 20 caracteres")
-    @Pattern(regexp = "^[0-9-]+$", message = "El RNC solo puede contener numeros y guion")
+    @Pattern(regexp = "^$|^[0-9-]+$", message = "El RNC solo puede contener numeros y guion")
     private String rnc;
 
     @NotBlank(message = "La direccion es requerida")

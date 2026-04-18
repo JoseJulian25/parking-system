@@ -55,7 +55,7 @@ public class EmpresaService {
     }
 
     private void validarUnicidadCreacion(String rnc, String email) {
-        if (empresaRepository.existsByRncIgnoreCase(rnc)) {
+        if (!rnc.isBlank() && empresaRepository.existsByRncIgnoreCase(rnc)) {
             throw new IllegalArgumentException("El RNC ya existe");
         }
 
@@ -65,7 +65,7 @@ public class EmpresaService {
     }
 
     private void validarUnicidadActualizacion(String rnc, String email, Long empresaId) {
-        if (empresaRepository.existsByRncIgnoreCaseAndIdNot(rnc, empresaId)) {
+        if (!rnc.isBlank() && empresaRepository.existsByRncIgnoreCaseAndIdNot(rnc, empresaId)) {
             throw new IllegalArgumentException("El RNC ya existe");
         }
 

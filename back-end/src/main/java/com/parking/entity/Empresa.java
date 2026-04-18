@@ -30,9 +30,8 @@ public class Empresa {
     @Column(nullable = false, length = 120)
     private String nombre;
 
-    @NotBlank
     @Size(max = 20)
-    @Pattern(regexp = "^[0-9-]+$", message = "El RNC solo puede contener numeros y guion")
+    @Pattern(regexp = "^$|^[0-9-]+$", message = "El RNC solo puede contener numeros y guion")
     @Column(nullable = false, unique = true, length = 20)
     private String rnc;
 

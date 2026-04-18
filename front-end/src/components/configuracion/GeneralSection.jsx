@@ -43,7 +43,7 @@ export const GeneralSection = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="empresa-rnc">RNC</Label>
+              <Label htmlFor="empresa-rnc">RNC (opcional)</Label>
               <Input
                 id="empresa-rnc"
                 disabled={!isEditingEmpresa}

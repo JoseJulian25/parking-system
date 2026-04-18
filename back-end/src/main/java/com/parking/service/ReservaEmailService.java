@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -25,12 +24,6 @@ public class ReservaEmailService {
     private final JavaMailSender mailSender;
     private final EmpresaRepository empresaRepository;
 
-    @Value("${spring.mail.username:}")
-    private String mailFromAddress;
-
-    @Value("${mail.from.name:Parking System}")
-    private String mailFromName;
-
     public ReservaEmailService(JavaMailSender mailSender, EmpresaRepository empresaRepository) {
         this.mailSender = mailSender;
         this.empresaRepository = empresaRepository;
@@ -38,29 +31,23 @@ public class ReservaEmailService {
 
     public void enviarConfirmacionReserva(Reserva reserva) {
         Empresa empresa = empresaRepository.findFirstByOrderByIdAsc().orElse(null);
-        String nombreEmpresa = empresa == null ? "Parking System" : safe(empresa.getNombre());
+        String nombreEmpresa = empresa == null ? "SmartPark" : safe(empresa.getNombre());
       String telefonoParqueo = empresa == null ? "No disponible" : safe(empresa.getTelefono());
-      String emailParqueo = empresa == null ? safe(mailFromAddress) : safe(empresa.getEmail());
+      String emailParqueo = empresa == null ? "" : safe(empresa.getEmail());
       String direccionParqueo = empresa == null ? "" : safe(empresa.getDireccion());
-        String fromAddress = safe(mailFromAddress);
-
-        if (fromAddress.isBlank()) {
-            throw new EmailDeliveryException(
-                    "No se pudo enviar el correo de confirmacion: configure MAIL_USERNAME en el backend.",
-                    null);
-        }
+        String fromAddress = emailParqueo;
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
 
-            helper.setFrom(fromAddress, mailFromName);
+            helper.setFrom(fromAddress);
             helper.setTo(safe(reserva.getClienteEmail()));
             helper.setSubject("Confirmacion de reserva " + safe(reserva.getCodigoReserva()) + " | " + nombreEmpresa);
             helper.setText(buildHtmlBody(reserva, nombreEmpresa, telefonoParqueo, emailParqueo, direccionParqueo), true);
 
             mailSender.send(message);
-        } catch (MailException | jakarta.mail.MessagingException | java.io.UnsupportedEncodingException ex) {
+        } catch (MailException | jakarta.mail.MessagingException ex) {
             throw new EmailDeliveryException(
                     "No se pudo enviar el correo al cliente. La reserva no fue creada. Verifique el correo del cliente y la configuracion SMTP.",
                     ex);
@@ -71,27 +58,21 @@ public class ReservaEmailService {
         Empresa empresa = empresaRepository.findFirstByOrderByIdAsc().orElse(null);
         String nombreEmpresa = empresa == null ? "Parking System" : safe(empresa.getNombre());
         String telefonoParqueo = empresa == null ? "No disponible" : safe(empresa.getTelefono());
-        String emailParqueo = empresa == null ? safe(mailFromAddress) : safe(empresa.getEmail());
+        String emailParqueo = empresa == null ? "" : safe(empresa.getEmail());
         String direccionParqueo = empresa == null ? "" : safe(empresa.getDireccion());
-        String fromAddress = safe(mailFromAddress);
-
-        if (fromAddress.isBlank()) {
-          throw new EmailDeliveryException(
-              "No se pudo enviar el correo de cancelacion: configure MAIL_USERNAME en el backend.",
-              null);
-        }
+        String fromAddress = emailParqueo;
 
         try {
           MimeMessage message = mailSender.createMimeMessage();
           MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
 
-          helper.setFrom(fromAddress, mailFromName);
+          helper.setFrom(fromAddress);
           helper.setTo(safe(reserva.getClienteEmail()));
           helper.setSubject("Cancelacion de reserva " + safe(reserva.getCodigoReserva()) + " | " + nombreEmpresa);
           helper.setText(buildCancelacionHtmlBody(reserva, nombreEmpresa, telefonoParqueo, emailParqueo, direccionParqueo), true);
 
           mailSender.send(message);
-        } catch (MailException | jakarta.mail.MessagingException | java.io.UnsupportedEncodingException ex) {
+        } catch (MailException | jakarta.mail.MessagingException ex) {
           throw new EmailDeliveryException(
               "No se pudo enviar el correo de cancelacion.",
               ex);

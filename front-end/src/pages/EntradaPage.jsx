@@ -93,28 +93,6 @@ export const EntradaPage = () => {
     }
   };
 
-  const exportarTicketPdf = (ticketData) => {
-    const result = abrirTicketEntradaPdf({
-      ticketData,
-      empresaTicket
-    });
-
-    if (!result.opened && result.reason === "popup-blocked") {
-      toast.error("El navegador bloqueó la apertura del visor PDF. Habilite pop-ups para este sitio.");
-    }
-  };
-
-  const exportarFacturaCobroPdf = (cobroData) => {
-    const result = abrirFacturaCobroPdf({
-      cobroData,
-      empresaTicket
-    });
-
-    if (!result.opened && result.reason === "popup-blocked") {
-      toast.error("El navegador bloqueó la apertura de la factura PDF. Habilite pop-ups para este sitio.");
-    }
-  };
-
   const fetchEspacios = async (showErrorToast = false) => {
     try {
       setLoading(true);
@@ -162,7 +140,10 @@ export const EntradaPage = () => {
       setTicketRegistrado(ticket);
       setPlaca("");
       setEspacioSeleccionadoId(null);
-      exportarTicketPdf(ticket);
+      abrirTicketEntradaPdf({
+        ticketData: ticket,
+        empresaTicket
+      });
       toast.success("Entrada registrada correctamente");
       await fetchEspacios(false);
     } catch (error) {
@@ -234,7 +215,10 @@ export const EntradaPage = () => {
       });
 
       setCobroProcesado(response);
-      exportarFacturaCobroPdf(response);
+      abrirFacturaCobroPdf({
+        cobroData: response,
+        empresaTicket
+      });
       toast.success("Salida y cobro registrados correctamente");
       setOpenDetalleDialog(false);
       await fetchEspacios(false);
