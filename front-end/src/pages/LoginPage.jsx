@@ -92,20 +92,6 @@ export const LoginPage = () => {
         {loading ? "Cargando..." : "Ingresar"}
                 </Button>
               </form>
-    
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-muted-foreground text-center mb-2">
-                  Credenciales de prueba:
-                </p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <p>
-                    <strong>Admin:</strong> admin / admin123
-                  </p>
-                  <p>
-                    <strong>Operador:</strong> operador / operador123
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
