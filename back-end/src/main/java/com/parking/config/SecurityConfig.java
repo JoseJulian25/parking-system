@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -53,6 +53,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/test/hello").permitAll()
+                .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 .requestMatchers(HttpMethod.GET, "/espacios").hasAnyAuthority("ROLE_OPERADOR", "ROLE_operador", "ROLE_ADMIN", "ROLE_admin")
                 .requestMatchers(HttpMethod.GET, "/espacios/inactivos").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin")
                 .requestMatchers(HttpMethod.PATCH, "/espacios/*/estado").hasAnyAuthority("ROLE_OPERADOR", "ROLE_operador", "ROLE_ADMIN", "ROLE_admin")

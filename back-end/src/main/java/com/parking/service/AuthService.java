@@ -33,12 +33,12 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
         );
 
-        // 2. Credenciales correctas → generar token
-        String token = jwtUtil.generateToken(dto.getUsername());
-
-        // 3. Cargar datos completos del usuario para el response
+        // 2. Cargar datos completos del usuario
         Usuario usuario = usuarioRepository.findByUsernameAndActivoTrueAndEliminadoFalse(dto.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + dto.getUsername()));
+
+        // 3. Credenciales correctas → generar token con rol
+        String token = jwtUtil.generateToken(usuario.getUsername(), usuario.getRol().getNombre());
 
         return new LoginResponseDTO(
                 token,
