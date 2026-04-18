@@ -272,12 +272,13 @@ public class ConsultasReportService {
                 })
                 .toList();
 
-        List<String> columnas = List.of("codigoTicket", "placa", "tipoVehiculo", "metodoPago", "monto", "horaPago", "procesadoPor");
+                List<String> columnas = List.of("codigoTicket", "placa", "tipoVehiculo", "estadoTicket", "metodoPago", "monto", "horaPago", "procesadoPor");
         List<ReporteTablaFilaDTO> filas = pagos.stream().map(pago -> {
             Map<String, String> row = new LinkedHashMap<>();
             row.put("codigoTicket", pago.getTicket() == null ? "-" : pago.getTicket().getCodigoTicket());
             row.put("placa", pago.getTicket() == null ? "-" : pago.getTicket().getPlaca());
             row.put("tipoVehiculo", pago.getTicket() == null || pago.getTicket().getTipoVehiculo() == null ? "-" : pago.getTicket().getTipoVehiculo().getNombre());
+                        row.put("estadoTicket", pago.getTicket() == null || pago.getTicket().getEstado() == null ? "-" : pago.getTicket().getEstado().getNombre());
             row.put("metodoPago", commonService.normalizarMetodoPago(pago.getMetodoPago()));
             row.put("monto", pago.getMonto() == null ? "-" : pago.getMonto().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
             row.put("horaPago", commonService.formatDateTime(pago.getHoraPago()));
@@ -303,10 +304,11 @@ public class ConsultasReportService {
                 : pagoRepository.findFirstByTicket_Id(ticket.getId())
                         .orElseThrow(() -> new NoSuchElementException("No existe pago registrado para este ticket"));
 
-        List<String> columnas = List.of("codigoTicket", "placa", "metodoPago", "monto", "montoRecibido", "horaPago", "procesadoPor");
+        List<String> columnas = List.of("codigoTicket", "placa", "estadoTicket", "metodoPago", "monto", "montoRecibido", "horaPago", "procesadoPor");
         Map<String, String> row = new LinkedHashMap<>();
         row.put("codigoTicket", ticket.getCodigoTicket());
         row.put("placa", ticket.getPlaca());
+        row.put("estadoTicket", ticket.getEstado() == null ? "-" : ticket.getEstado().getNombre());
         row.put("metodoPago", pago == null ? "-" : commonService.normalizarMetodoPago(pago.getMetodoPago()));
         row.put("monto", pago == null || pago.getMonto() == null ? "-" : pago.getMonto().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
         row.put("montoRecibido", pago == null || pago.getMontoRecibido() == null ? "-" : pago.getMontoRecibido().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());

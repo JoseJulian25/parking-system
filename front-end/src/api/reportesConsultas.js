@@ -23,6 +23,11 @@ export const consultarPagoPorTicket = async (codigoTicket) => {
   return data;
 };
 
+export const anularPagoPorTicket = async (codigoTicket) => {
+  const { data } = await client.patch(`/salidas/pago/${codigoTicket}/anular`);
+  return data;
+};
+
 export const consultarPorReserva = async (codigoReserva) => {
   const { data } = await client.get(`/reportes/consultas/reserva/${codigoReserva}`);
   return data;

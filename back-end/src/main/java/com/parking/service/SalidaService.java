@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.parking.dto.PagoAnulacionResponseDTO;
 import com.parking.dto.SalidaCobroDTO;
 import com.parking.dto.SalidaCobroResponseDTO;
 import com.parking.dto.SalidaResumenDTO;
@@ -41,6 +42,7 @@ public class SalidaService {
     private static final String ESTADO_TICKET_ACTIVO = "ACTIVO";
     private static final String ESTADO_TICKET_CERRADO = "CERRADO";
     private static final String ESTADO_ESPACIO_LIBRE = "LIBRE";
+    private static final String ESTADO_ESPACIO_OCUPADO = "OCUPADO";
     private static final String ESTADO_RESERVA_ACTIVA = "ACTIVA";
     private static final String ESTADO_RESERVA_FINALIZADA = "FINALIZADA";
     private static final String METODO_PAGO_EFECTIVO = "EFECTIVO";
@@ -160,6 +162,62 @@ public class SalidaService {
                 montoRecibido.setScale(2, RoundingMode.HALF_UP),
                 cambio,
                 ticketActualizado.getEstado().getNombre());
+    }
+
+    @Transactional
+    public PagoAnulacionResponseDTO anularPagoPorCodigoTicket(String codigoTicket) {
+        String codigoNormalizado = normalize(codigoTicket);
+        if (codigoNormalizado.isBlank()) {
+            throw new IllegalArgumentException("El codigo de ticket es obligatorio");
+        }
+
+        Ticket ticket = ticketRepository.findByCodigoTicketIgnoreCase(codigoNormalizado)
+                .orElseThrow(() -> new NoSuchElementException("Ticket no encontrado"));
+
+        if (ticket.getId() == null) {
+            throw new IllegalStateException("El ticket no tiene identificador valido para anular pago");
+        }
+
+        Pago pago = pagoRepository.findFirstByTicket_Id(ticket.getId())
+                .orElseThrow(() -> new NoSuchElementException("No existe pago registrado para este ticket"));
+
+        String estadoTicketActual = ticket.getEstado() == null ? "" : normalize(ticket.getEstado().getNombre()).toUpperCase(Locale.ROOT);
+        if (!ESTADO_TICKET_CERRADO.equals(estadoTicketActual)) {
+            throw new IllegalStateException("Solo se puede anular pago de tickets cerrados");
+        }
+
+        EstadoTicket estadoActivo = estadoTicketRepository.findByNombreIgnoreCase(ESTADO_TICKET_ACTIVO)
+                .orElseThrow(() -> new NoSuchElementException("Estado de ticket ACTIVO no encontrado"));
+        EstadoEspacio estadoOcupado = estadoEspacioRepository.findByNombreIgnoreCase(ESTADO_ESPACIO_OCUPADO)
+                .orElseThrow(() -> new NoSuchElementException("Estado de espacio OCUPADO no encontrado"));
+
+        Espacio espacio = ticket.getEspacio();
+        if (espacio == null) {
+            throw new IllegalStateException("El ticket no tiene espacio asociado");
+        }
+
+        String estadoEspacioActual = espacio.getEstado() == null ? "" : normalize(espacio.getEstado().getNombre()).toUpperCase(Locale.ROOT);
+        if (!ESTADO_ESPACIO_LIBRE.equals(estadoEspacioActual)) {
+            throw new IllegalStateException("No se puede anular el pago porque el espacio asociado ya no esta libre");
+        }
+
+        ticket.setEstado(estadoActivo);
+        ticket.setHoraSalida(null);
+        ticket.setMontoTotal(null);
+        Ticket ticketActualizado = ticketRepository.save(ticket);
+
+        espacio.setEstado(estadoOcupado);
+        Espacio espacioActualizado = espacioRepository.save(espacio);
+
+        pagoRepository.delete(pago);
+
+        return new PagoAnulacionResponseDTO(
+                ticketActualizado.getCodigoTicket(),
+                ticketActualizado.getPlaca(),
+                espacioActualizado.getCodigoEspacio(),
+                ticketActualizado.getEstado() == null ? "-" : ticketActualizado.getEstado().getNombre(),
+                espacioActualizado.getEstado() == null ? "-" : espacioActualizado.getEstado().getNombre(),
+                ticketActualizado.getHoraEntrada());
     }
 
     private void finalizarReservaActivaSiAplica(Long espacioId, String placa, LocalDateTime horaSalida) {

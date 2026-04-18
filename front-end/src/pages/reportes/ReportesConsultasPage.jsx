@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Loader2, RefreshCw, Search } from "lucide-react";
 
 import {
+  anularPagoPorTicket,
   anularTicket,
   consultarPagoPorTicket,
   consultarPorPlaca,
@@ -245,8 +246,11 @@ export const ReportesConsultasPage = () => {
   const [loadingVehiculos, setLoadingVehiculos] = useState(false);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [loadingAnulacion, setLoadingAnulacion] = useState(false);
+  const [loadingAnulacionPago, setLoadingAnulacionPago] = useState(false);
   const [openAnularDialog, setOpenAnularDialog] = useState(false);
   const [ticketPendienteAnulacion, setTicketPendienteAnulacion] = useState("");
+  const [openAnularPagoDialog, setOpenAnularPagoDialog] = useState(false);
+  const [ticketPagoPendienteAnulacion, setTicketPagoPendienteAnulacion] = useState("");
 
   const baseParams = useMemo(
     () => ({
@@ -387,6 +391,38 @@ export const ReportesConsultasPage = () => {
     }
   };
 
+  const handleAnularPagoDesdeFila = (codigoTicket) => {
+    const codigoNormalizado = String(codigoTicket || "").trim();
+    if (!codigoNormalizado) {
+      toast.error("No se encontro el codigo de ticket");
+      return;
+    }
+    setTicketPagoPendienteAnulacion(codigoNormalizado);
+    setOpenAnularPagoDialog(true);
+  };
+
+  const confirmarAnulacionPago = async () => {
+    const codigoNormalizado = String(ticketPagoPendienteAnulacion || "").trim();
+    if (!codigoNormalizado) {
+      setOpenAnularPagoDialog(false);
+      return;
+    }
+
+    try {
+      setLoadingAnulacionPago(true);
+      await anularPagoPorTicket(codigoNormalizado);
+      toast.success("Pago anulado correctamente");
+
+      setOpenAnularPagoDialog(false);
+      setTicketPagoPendienteAnulacion("");
+      await cargarPagosListado(pagosPage);
+    } catch (error) {
+      toast.error(await getReportesErrorMessage(error, "No se pudo anular el pago"));
+    } finally {
+      setLoadingAnulacionPago(false);
+    }
+  };
+
   const buscarReservaPorCodigo = async () => {
     const value = codigoReserva.trim();
     if (!value) {
@@ -441,7 +477,7 @@ export const ReportesConsultasPage = () => {
     cargarSeccionActiva();
   }, [seccionActiva]);
 
-  const loading = loadingTickets || loadingPagos || loadingReservas || loadingVehiculos || loadingDetalle || loadingAnulacion;
+  const loading = loadingTickets || loadingPagos || loadingReservas || loadingVehiculos || loadingDetalle || loadingAnulacion || loadingAnulacionPago;
 
   const renderPagination = (page, total, onPrev, onNext, loadingSection) => {
     const canPrev = page > 0;
@@ -488,6 +524,36 @@ export const ReportesConsultasPage = () => {
               disabled={loadingAnulacion}
             >
               {loadingAnulacion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Confirmar anulacion
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openAnularPagoDialog} onOpenChange={setOpenAnularPagoDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Anular pago</DialogTitle>
+            <DialogDescription>
+              Esta accion anulara el pago del ticket {ticketPagoPendienteAnulacion || "-"}. El ticket volvera a estado activo y el espacio quedara ocupado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (loadingAnulacionPago) return;
+                setOpenAnularPagoDialog(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              onClick={confirmarAnulacionPago}
+              disabled={loadingAnulacionPago}
+            >
+              {loadingAnulacionPago ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirmar anulacion
             </Button>
           </DialogFooter>
@@ -618,7 +684,62 @@ export const ReportesConsultasPage = () => {
               loading: loadingDetalle,
             })}
 
-            {renderTablaDinamica(null, pagosListado?.columnas || [], pagosListado?.filas || [])}
+            <div className="rounded-md border border-slate-300/90 bg-white">
+              <Table className="reportes-table">
+                <TableHeader>
+                  <TableRow>
+                    {(pagosListado?.columnas || []).map((columna) => (
+                      <TableHead key={columna} className="h-9 px-2">
+                        {columna}
+                      </TableHead>
+                    ))}
+                    <TableHead className="h-9 px-2 text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!pagosListado?.filas?.length ? (
+                    <TableRow>
+                      <TableCell colSpan={Math.max((pagosListado?.columnas || []).length + 1, 1)} className="py-6 text-center text-xs text-muted-foreground">
+                        Sin resultados.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    pagosListado.filas.map((fila, index) => {
+                      const columnasFila = fila?.columnas || {};
+                      const codigoTicketFila = columnasFila.codigoTicket;
+                      const estadoTicketFila = String(columnasFila.estadoTicket || "").toUpperCase();
+                      const canAnularPago = Boolean(codigoTicketFila) && (estadoTicketFila === "" || estadoTicketFila === "CERRADO");
+
+                      return (
+                        <TableRow key={`row-pago-${index}`}>
+                          {(pagosListado?.columnas || []).map((columna) => (
+                            <TableCell key={`${index}-${columna}`} className="px-2 py-2">
+                              {renderCellValue(columna, columnasFila[columna])}
+                            </TableCell>
+                          ))}
+                          <TableCell className="px-2 py-2 text-right">
+                            {canAnularPago ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 border-rose-300 px-2 text-[11px] text-rose-700 hover:bg-rose-50"
+                                onClick={() => handleAnularPagoDesdeFila(codigoTicketFila)}
+                                disabled={loadingAnulacionPago}
+                              >
+                                {loadingAnulacionPago ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                                Anular
+                              </Button>
+                            ) : (
+                              <span className="text-[11px] text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
             {!pagoBusquedaActiva ? renderPagination(
               pagosPage,
               getTotalRegistros(pagosListado),
