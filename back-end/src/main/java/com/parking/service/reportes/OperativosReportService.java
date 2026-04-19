@@ -5,11 +5,13 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.temporal.WeekFields;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +47,13 @@ public class OperativosReportService {
 
     @Transactional(readOnly = true)
     public ReporteSerieTemporalResponseDTO obtenerEntradasPorHora(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta, Long usuarioId, String tipoVehiculo) {
+        return obtenerEntradasPorPeriodo(fechaDesde, fechaHasta, usuarioId, tipoVehiculo, "hora");
+    }
+
+    @Transactional(readOnly = true)
+    public ReporteSerieTemporalResponseDTO obtenerEntradasPorPeriodo(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta, Long usuarioId, String tipoVehiculo, String granularidad) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
+        String gran = normalizarGranularidad(granularidad);
         List<Ticket> tickets = filtrarPorUsuarioYTipo(
             ticketRepository.findAllByHoraEntradaGreaterThanEqualAndHoraEntradaLessThan(
                 rango.fechaDesde(),
@@ -53,16 +61,18 @@ public class OperativosReportService {
             usuarioId,
             tipoVehiculo);
 
-        return construirSeriePorHora(
-                tickets,
-                Ticket::getHoraEntrada,
-                "Entradas por hora",
-                "tickets");
+        return construirSeriePorPeriodo(tickets, Ticket::getHoraEntrada, gran, "Entradas por " + gran, "tickets");
     }
 
     @Transactional(readOnly = true)
     public ReporteSerieTemporalResponseDTO obtenerSalidasPorHora(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta, Long usuarioId, String tipoVehiculo) {
+        return obtenerSalidasPorPeriodo(fechaDesde, fechaHasta, usuarioId, tipoVehiculo, "hora");
+    }
+
+    @Transactional(readOnly = true)
+    public ReporteSerieTemporalResponseDTO obtenerSalidasPorPeriodo(OffsetDateTime fechaDesde, OffsetDateTime fechaHasta, Long usuarioId, String tipoVehiculo, String granularidad) {
         RangoFechas rango = commonService.resolverRango(fechaDesde, fechaHasta, MAX_RANGE_DIAS);
+        String gran = normalizarGranularidad(granularidad);
         List<Ticket> tickets = filtrarPorUsuarioYTipo(
             ticketRepository.findAllByHoraSalidaGreaterThanEqualAndHoraSalidaLessThan(
                 rango.fechaDesde(),
@@ -70,11 +80,7 @@ public class OperativosReportService {
             usuarioId,
             tipoVehiculo);
 
-        return construirSeriePorHora(
-                tickets,
-                Ticket::getHoraSalida,
-                "Salidas por hora",
-                "tickets");
+        return construirSeriePorPeriodo(tickets, Ticket::getHoraSalida, gran, "Salidas por " + gran, "tickets");
     }
 
     @Transactional(readOnly = true)
@@ -152,16 +158,33 @@ public class OperativosReportService {
                 (long) filas.size());
     }
 
-    private ReporteSerieTemporalResponseDTO construirSeriePorHora(
+    private ReporteSerieTemporalResponseDTO construirSeriePorPeriodo(
             List<Ticket> tickets,
             Function<Ticket, LocalDateTime> extractor,
+            String granularidad,
             String titulo,
             String unidad) {
-        long[] conteoPorHora = agruparPorHora(tickets, extractor);
-        List<ReporteSerieTemporalItemDTO> items = java.util.stream.IntStream.range(0, 24)
-                .mapToObj(hora -> new ReporteSerieTemporalItemDTO(
-                        String.format("%02d:00", hora),
-                        BigDecimal.valueOf(conteoPorHora[hora])))
+        if ("hora".equals(granularidad)) {
+            long[] conteoPorHora = agruparPorHora(tickets, extractor);
+            List<ReporteSerieTemporalItemDTO> items = java.util.stream.IntStream.range(0, 24)
+                    .mapToObj(hora -> new ReporteSerieTemporalItemDTO(
+                            String.format("%02d:00", hora),
+                            BigDecimal.valueOf(conteoPorHora[hora])))
+                    .toList();
+            return new ReporteSerieTemporalResponseDTO(titulo, unidad, items);
+        }
+
+        Map<String, Long> conteo = tickets.stream()
+                .map(extractor)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.groupingBy(
+                        dt -> construirEtiquetaPeriodo(dt, granularidad),
+                        LinkedHashMap::new,
+                        Collectors.counting()));
+
+        List<ReporteSerieTemporalItemDTO> items = conteo.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> new ReporteSerieTemporalItemDTO(e.getKey(), BigDecimal.valueOf(e.getValue())))
                 .toList();
 
         return new ReporteSerieTemporalResponseDTO(titulo, unidad, items);
@@ -207,6 +230,29 @@ public class OperativosReportService {
         return ticket.getEstado() != null
                 && ticket.getEstado().getNombre() != null
                 && ESTADO_TICKET_ANULADO.equalsIgnoreCase(ticket.getEstado().getNombre());
+    }
+
+    private String normalizarGranularidad(String granularidad) {
+        if (granularidad == null || granularidad.isBlank()) return "hora";
+        String val = granularidad.trim().toLowerCase(Locale.ROOT);
+        return switch (val) {
+            case "dia", "semana", "mes", "hora" -> val;
+            default -> "hora";
+        };
+    }
+
+    private String construirEtiquetaPeriodo(LocalDateTime dt, String granularidad) {
+        return switch (granularidad) {
+            case "mes" -> String.format("%04d-%02d", dt.getYear(), dt.getMonthValue());
+            case "semana" -> {
+                java.time.temporal.WeekFields wf = WeekFields.ISO;
+                int week = dt.get(wf.weekOfWeekBasedYear());
+                int year = dt.get(wf.weekBasedYear());
+                yield String.format("%04d-W%02d", year, week);
+            }
+            case "dia" -> dt.toLocalDate().toString();
+            default -> String.format("%02d:00", dt.getHour());
+        };
     }
 
     private String normalizarTipo(String tipoVehiculo) {

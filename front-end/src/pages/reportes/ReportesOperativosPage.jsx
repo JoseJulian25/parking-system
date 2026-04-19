@@ -93,6 +93,7 @@ export const ReportesOperativosPage = () => {
       const params = {
         fechaDesde: toApiOffsetDateTime(fechaDesde),
         fechaHasta: toApiOffsetDateTime(fechaHasta),
+        granularidad,
         usuarioId: usuarioSeleccionado !== "TODOS" ? Number(usuarioSeleccionado) : undefined,
         tipoVehiculo: tipoVehiculo !== "TODOS" ? tipoVehiculo : undefined,
       };
@@ -233,7 +234,10 @@ export const ReportesOperativosPage = () => {
       </div>
 
       <div className="reportes-panel">
-        <h2 className="mb-2 text-sm font-semibold">Entradas vs Salidas por hora</h2>
+        <h2 className="mb-2 text-sm font-semibold">
+          Entradas vs Salidas por{" "}
+          {granularidad === "hora" ? "hora" : granularidad === "dia" ? "dia" : granularidad === "semana" ? "semana" : "mes"}
+        </h2>
         {!chartData.length ? (
           <div className="flex h-72 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
             No hay movimientos en el rango seleccionado.

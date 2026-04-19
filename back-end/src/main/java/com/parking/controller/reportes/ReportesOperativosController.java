@@ -28,8 +28,9 @@ public class ReportesOperativosController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Long usuarioId,
-            @RequestParam(required = false) String tipoVehiculo) {
-        return ResponseEntity.ok(operativosReportService.obtenerEntradasPorHora(fechaDesde, fechaHasta, usuarioId, tipoVehiculo));
+            @RequestParam(required = false) String tipoVehiculo,
+            @RequestParam(required = false) String granularidad) {
+        return ResponseEntity.ok(operativosReportService.obtenerEntradasPorPeriodo(fechaDesde, fechaHasta, usuarioId, tipoVehiculo, granularidad));
     }
 
     @GetMapping("/salidas-por-hora")
@@ -37,8 +38,9 @@ public class ReportesOperativosController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime fechaHasta,
             @RequestParam(required = false) Long usuarioId,
-            @RequestParam(required = false) String tipoVehiculo) {
-        return ResponseEntity.ok(operativosReportService.obtenerSalidasPorHora(fechaDesde, fechaHasta, usuarioId, tipoVehiculo));
+            @RequestParam(required = false) String tipoVehiculo,
+            @RequestParam(required = false) String granularidad) {
+        return ResponseEntity.ok(operativosReportService.obtenerSalidasPorPeriodo(fechaDesde, fechaHasta, usuarioId, tipoVehiculo, granularidad));
     }
 
     @GetMapping("/tickets-activos")

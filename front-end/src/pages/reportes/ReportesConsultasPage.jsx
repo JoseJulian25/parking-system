@@ -580,10 +580,6 @@ export const ReportesConsultasPage = () => {
           <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Tickets</h2>
-              <Button size="sm" variant="outline" onClick={() => cargarTicketsListado(ticketsPage)} disabled={loadingTickets}>
-                <RefreshCw className={`h-4 w-4 ${loadingTickets ? "animate-spin" : ""}`} />
-                Actualizar
-              </Button>
             </div>
 
             {renderBusquedaCodigo({
@@ -665,10 +661,6 @@ export const ReportesConsultasPage = () => {
           <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Pagos</h2>
-              <Button size="sm" variant="outline" onClick={() => cargarPagosListado(pagosPage)} disabled={loadingPagos}>
-                <RefreshCw className={`h-4 w-4 ${loadingPagos ? "animate-spin" : ""}`} />
-                Actualizar
-              </Button>
             </div>
 
             {renderBusquedaCodigo({
@@ -750,10 +742,6 @@ export const ReportesConsultasPage = () => {
           <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Reservas</h2>
-              <Button size="sm" variant="outline" onClick={() => cargarReservasListado(reservasPage)} disabled={loadingReservas}>
-                <RefreshCw className={`h-4 w-4 ${loadingReservas ? "animate-spin" : ""}`} />
-                Actualizar
-              </Button>
             </div>
 
             {renderBusquedaCodigo({
@@ -780,10 +768,6 @@ export const ReportesConsultasPage = () => {
           <div className="reportes-panel space-y-2.5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Vehiculo</h2>
-              <Button size="sm" variant="outline" onClick={() => cargarVehiculosListado(vehiculosPage)} disabled={loadingVehiculos}>
-                <RefreshCw className={`h-4 w-4 ${loadingVehiculos ? "animate-spin" : ""}`} />
-                Actualizar
-              </Button>
             </div>
 
             {renderBusquedaCodigo({
