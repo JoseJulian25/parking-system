@@ -15,6 +15,7 @@ export const EspaciosSection = () => {
   const [loading, setLoading] = useState(false);
   const [loadingActionId, setLoadingActionId] = useState(null);
   const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [categoria, setCategoria] = useState("total");
 
   const fetchEspacios = async () => {
     try {
@@ -97,6 +98,34 @@ export const EspaciosSection = () => {
     };
   }, [espacios, espaciosInactivos]);
 
+  const espaciosFiltrados = useMemo(() => {
+
+  if (categoria === "carros") {
+    return espacios.filter(e => 
+      String(e.tipoVehiculo).toUpperCase() === "CARRO"
+    );
+  }
+
+  if (categoria === "motos") {
+    return espacios.filter(e => 
+      String(e.tipoVehiculo).toUpperCase() === "MOTO"
+    );
+  }
+
+  if (categoria === "libres") {
+    return espacios.filter(e => 
+      String(e.estado).toUpperCase() === "LIBRE"
+    );
+  }
+
+  if (categoria === "inactivos") {
+    return espaciosInactivos;
+  }
+
+  return espacios;
+
+  }, [categoria, espacios, espaciosInactivos]);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -117,11 +146,25 @@ export const EspaciosSection = () => {
           </p>
 
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">Total: {resumen.total}</Badge>
-            <Badge variant="outline">Carros: {resumen.carros}</Badge>
-            <Badge variant="outline">Motos: {resumen.motos}</Badge>
-            <Badge variant="outline">Libres: {resumen.libres}</Badge>
-            <Badge variant="outline">Inactivos: {resumen.inactivos}</Badge>
+            <Badge variant="outline" className="cursor-pointer" onClick={() => setCategoria("total")}>
+              Total: {resumen.total}
+            </Badge>
+
+            <Badge variant="outline" className="cursor-pointer" onClick={() => setCategoria("carros")}>
+              Carros: {resumen.carros}
+            </Badge>
+
+            <Badge variant="outline" className="cursor-pointer" onClick={() => setCategoria("motos")}>
+              Motos: {resumen.motos}
+            </Badge>
+
+            <Badge variant="outline" className="cursor-pointer" onClick={() => setCategoria("libres")}>
+              Libres: {resumen.libres}
+            </Badge>
+
+            <Badge variant="outline" className="cursor-pointer" onClick={() => setCategoria("inactivos")}>
+              Inactivos: {resumen.inactivos}
+            </Badge>
           </div>
 
           <Table className="text-xs">
@@ -148,7 +191,7 @@ export const EspaciosSection = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                espacios.slice(0, 80).map((espacio) => (
+                espaciosFiltrados.slice(0, 80).map((espacio) => (
                   <TableRow key={espacio.id}>
                     <TableCell className="px-2 py-2 font-medium">{espacio.codigoEspacio || espacio.numero || "-"}</TableCell>
                     <TableCell className="px-2 py-2">{espacio.tipoVehiculo || "-"}</TableCell>
