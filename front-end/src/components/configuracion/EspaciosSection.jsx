@@ -84,47 +84,65 @@ export const EspaciosSection = () => {
     }
   };
 
+  const espaciosCombinados = useMemo(() => {
+    const map = new Map();
+    espacios.forEach((espacio) => {
+      if (espacio?.id !== undefined) {
+        map.set(espacio.id, espacio);
+      }
+    });
+    espaciosInactivos.forEach((espacio) => {
+      if (espacio?.id !== undefined) {
+        map.set(espacio.id, espacio);
+      }
+    });
+    return Array.from(map.values());
+  }, [espacios, espaciosInactivos]);
+
   const resumen = useMemo(() => {
     const libres = espacios.filter((espacio) => String(espacio.estado || "").toUpperCase() === "LIBRE").length;
-    const carros = espacios.filter((espacio) => String(espacio.tipoVehiculo || "").toUpperCase() === "CARRO").length;
-    const motos = espacios.filter((espacio) => String(espacio.tipoVehiculo || "").toUpperCase() === "MOTO").length;
+    const carros = espaciosCombinados.filter((espacio) => String(espacio.tipoVehiculo || "").toUpperCase() === "CARRO").length;
+    const motos = espaciosCombinados.filter((espacio) => String(espacio.tipoVehiculo || "").toUpperCase() === "MOTO").length;
 
     return {
-      total: espacios.length,
+      total: espaciosCombinados.length,
       libres,
       carros,
       motos,
       inactivos: espaciosInactivos.length,
     };
-  }, [espacios, espaciosInactivos]);
+  }, [espacios, espaciosInactivos, espaciosCombinados]);
 
   const espaciosFiltrados = useMemo(() => {
+    if (categoria === "carros") {
+      return espaciosCombinados.filter((e) => String(e.tipoVehiculo || "").toUpperCase() === "CARRO");
+    }
 
-  if (categoria === "carros") {
-    return espacios.filter(e => 
-      String(e.tipoVehiculo).toUpperCase() === "CARRO"
-    );
-  }
+    if (categoria === "motos") {
+      return espaciosCombinados.filter((e) => String(e.tipoVehiculo || "").toUpperCase() === "MOTO");
+    }
 
-  if (categoria === "motos") {
-    return espacios.filter(e => 
-      String(e.tipoVehiculo).toUpperCase() === "MOTO"
-    );
-  }
+    if (categoria === "libres") {
+      return espacios.filter((e) => String(e.estado || "").toUpperCase() === "LIBRE");
+    }
 
-  if (categoria === "libres") {
-    return espacios.filter(e => 
-      String(e.estado).toUpperCase() === "LIBRE"
-    );
-  }
+    if (categoria === "inactivos") {
+      return espaciosInactivos;
+    }
 
-  if (categoria === "inactivos") {
-    return espaciosInactivos;
-  }
+    return espaciosCombinados;
+  }, [categoria, espaciosCombinados, espacios, espaciosInactivos]);
 
-  return espacios;
+  const espaciosInactivosIds = useMemo(() => new Set(espaciosInactivos.map((e) => e.id)), [espaciosInactivos]);
 
-  }, [categoria, espacios, espaciosInactivos]);
+  const isEspacioActivo = (espacio) => {
+    if (espacio?.activo !== undefined && espacio?.activo !== null) {
+      const value = String(espacio.activo).trim().toLowerCase();
+      return value === "1" || value === "true";
+    }
+
+    return !espaciosInactivosIds.has(espacio?.id);
+  };
 
   return (
     <div className="space-y-4">
@@ -184,82 +202,48 @@ export const EspaciosSection = () => {
                     Cargando espacios...
                   </TableCell>
                 </TableRow>
-              ) : !espacios.length ? (
+                ) : !espaciosFiltrados.length ? (
                 <TableRow>
                   <TableCell colSpan={5} className="py-6 text-center text-xs text-muted-foreground">
                     No hay espacios registrados.
                   </TableCell>
                 </TableRow>
               ) : (
-                espaciosFiltrados.slice(0, 80).map((espacio) => (
-                  <TableRow key={espacio.id}>
-                    <TableCell className="px-2 py-2 font-medium">{espacio.codigoEspacio || espacio.numero || "-"}</TableCell>
-                    <TableCell className="px-2 py-2">{espacio.tipoVehiculo || "-"}</TableCell>
-                    <TableCell className="px-2 py-2">{espacio.estado || "-"}</TableCell>
-                    <TableCell className="px-2 py-2">
-                      <Badge variant="outline" className="border-emerald-300 text-emerald-700">Sí</Badge>
-                    </TableCell>
-                    <TableCell className="px-2 py-2 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={loadingActionId === espacio.id || String(espacio.estado || "").toUpperCase() !== "LIBRE"}
-                        onClick={() => handleDesactivar(espacio)}
-                      >
-                        {loadingActionId === espacio.id ? "Procesando..." : "Desactivar"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                espaciosFiltrados.slice(0, 80).map((espacio) => {
+                  const activo = isEspacioActivo(espacio);
+                  return (
+                    <TableRow key={espacio.id}>
+                      <TableCell className="px-2 py-2 font-medium">{espacio.codigoEspacio || espacio.numero || "-"}</TableCell>
+                      <TableCell className="px-2 py-2">{espacio.tipoVehiculo || "-"}</TableCell>
+                      <TableCell className="px-2 py-2">{espacio.estado || "-"}</TableCell>
+                      <TableCell className="px-2 py-2">
+                        <Badge
+                          variant="outline"
+                          className={activo ? "border-emerald-300 text-emerald-700" : "border-rose-300 text-rose-700"}
+                        >
+                          {activo ? "Sí" : "No"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-2 py-2 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={loadingActionId === espacio.id || (activo && String(espacio.estado || "").toUpperCase() !== "LIBRE")}
+                          onClick={() => (activo ? handleDesactivar(espacio) : handleReactivar(espacio))}
+                        >
+                          {loadingActionId === espacio.id ? "Procesando..." : activo ? "Desactivar" : "Reactivar"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
 
-          {espacios.length > 80 ? (
-            <p className="text-xs text-muted-foreground">Mostrando 80 de {espacios.length} espacios.</p>
+          {espaciosFiltrados.length > 80 ? (
+            <p className="text-xs text-muted-foreground">Mostrando 80 de {espaciosFiltrados.length} espacios.</p>
           ) : null}
-
-          <Table className="text-xs">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="h-9 px-2">Inactivos</TableHead>
-                <TableHead className="h-9 px-2">Tipo</TableHead>
-                <TableHead className="h-9 px-2">Estado</TableHead>
-                <TableHead className="h-9 px-2">Activo</TableHead>
-                <TableHead className="h-9 px-2 text-right">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!espaciosInactivos.length ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-4 text-center text-xs text-muted-foreground">
-                    No hay espacios inactivos.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                espaciosInactivos.map((espacio) => (
-                  <TableRow key={`inactivo-${espacio.id}`}>
-                    <TableCell className="px-2 py-2 font-medium">{espacio.codigoEspacio || espacio.numero || "-"}</TableCell>
-                    <TableCell className="px-2 py-2">{espacio.tipoVehiculo || "-"}</TableCell>
-                    <TableCell className="px-2 py-2">{espacio.estado || "-"}</TableCell>
-                    <TableCell className="px-2 py-2">
-                      <Badge variant="outline" className="border-rose-300 text-rose-700">No</Badge>
-                    </TableCell>
-                    <TableCell className="px-2 py-2 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={loadingActionId === espacio.id}
-                        onClick={() => handleReactivar(espacio)}
-                      >
-                        {loadingActionId === espacio.id ? "Procesando..." : "Reactivar"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
         </CardContent>
       </Card>
 
