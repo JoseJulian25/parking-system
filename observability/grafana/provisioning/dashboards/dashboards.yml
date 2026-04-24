@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: parking-system-dashboards
+    orgId: 1
+    folder: Parking System
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 15
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
