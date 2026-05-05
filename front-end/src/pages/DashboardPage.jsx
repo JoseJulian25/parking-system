@@ -71,6 +71,14 @@ const getTicketEntradaDate = (ticketActivo) => {
   return fallback;
 };
 
+const formatMinutes = (minutes) => {
+  if (!Number.isFinite(minutes) || minutes <= 0) return "0m";
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  if (hours <= 0) return `${remaining}m`;
+  return `${hours}h ${remaining}m`;
+};
+
 export const DashboardPage = () => {
   const navigate = useNavigate();
 
@@ -161,6 +169,25 @@ export const DashboardPage = () => {
       .sort((a, b) => new Date(a.horaInicio).getTime() - new Date(b.horaInicio).getTime());
   }, [reservas]);
 
+  const reservasPendientesAtrasadas = useMemo(() => {
+    const now = Date.now();
+
+    return reservas
+      .filter((reserva) => (reserva.estado || "").toUpperCase() === "PENDIENTE")
+      .map((reserva) => {
+        const timestamp = new Date(reserva.horaInicio).getTime();
+        if (Number.isNaN(timestamp) || timestamp >= now) return null;
+
+        const minutesLate = Math.floor((now - timestamp) / 60000);
+        return {
+          ...reserva,
+          minutesLate: Math.max(0, minutesLate)
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.minutesLate - a.minutesLate);
+  }, [reservas]);
+
   const estadiasLargas = useMemo(() => {
     const now = Date.now();
     return espacios
@@ -179,13 +206,24 @@ export const DashboardPage = () => {
   }, [espacios]);
 
   const alertasOperativas = useMemo(() => {
+    const alertasAtrasadas = reservasPendientesAtrasadas.map((item) => ({
+      tipo: "Reserva vencida",
+      referencia: `${item.codigoReserva || "-"} · ${item.placa || "-"}`,
+      detalle: "Reserva pendiente fuera de horario",
+      tiempo: `Hace ${formatMinutes(item.minutesLate)}`,
+      ordenGrupo: 0,
+      ordenValor: item.minutesLate,
+      ordenDireccion: "desc"
+    }));
+
     const alertasReservas = reservasPendientesProximas.map((item) => ({
       tipo: "Reserva proxima",
       referencia: `${item.codigoReserva || "-"} · ${item.placa || "-"}`,
       detalle: "Reserva pendiente por iniciar",
       tiempo: formatDateTime(item.horaInicio),
-      ordenGrupo: 0,
+      ordenGrupo: 1,
       ordenValor: new Date(item.horaInicio).getTime(),
+      ordenDireccion: "asc"
     }));
 
     const alertasEstadias = estadiasLargas.map((item) => ({
@@ -193,15 +231,17 @@ export const DashboardPage = () => {
       referencia: `${item.codigoEspacio || "-"} · ${item.placa || "-"}`,
       detalle: "Vehiculo con permanencia extensa",
       tiempo: `${Math.floor(item.minutos / 60)}h ${item.minutos % 60}m`,
-      ordenGrupo: 1,
+      ordenGrupo: 2,
       ordenValor: item.minutos,
+      ordenDireccion: "desc"
     }));
 
-    return [...alertasReservas, ...alertasEstadias].sort((a, b) => {
+    return [...alertasAtrasadas, ...alertasReservas, ...alertasEstadias].sort((a, b) => {
       if (a.ordenGrupo !== b.ordenGrupo) return a.ordenGrupo - b.ordenGrupo;
-      return a.ordenGrupo === 0 ? a.ordenValor - b.ordenValor : b.ordenValor - a.ordenValor;
+      if (a.ordenDireccion === "asc") return a.ordenValor - b.ordenValor;
+      return b.ordenValor - a.ordenValor;
     });
-  }, [reservasPendientesProximas, estadiasLargas]);
+  }, [reservasPendientesAtrasadas, reservasPendientesProximas, estadiasLargas]);
 
   const lineChartData = useMemo(() => {
     return (Array.isArray(movimientosHora) ? movimientosHora : []).map((item) => ({

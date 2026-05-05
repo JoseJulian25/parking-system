@@ -47,6 +47,17 @@ export default function CrearReserva({ onSuccess }) {
     }).format(date);
   };
 
+  const getMinHoraInicio = () => {
+    if (!fechaReserva) return "";
+    const today = new Date();
+    const todayIso = today.toLocaleDateString("en-CA");
+    if (fechaReserva !== todayIso) return "";
+
+    const hours = String(today.getHours()).padStart(2, "0");
+    const minutes = String(today.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
   const fetchEspacios = async () => {
     try {
       const data = await getEspacios();
@@ -340,7 +351,7 @@ export default function CrearReserva({ onSuccess }) {
                     type="date"
                     value={fechaReserva}
                     onChange={(e) => setFechaReserva(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={new Date().toLocaleDateString("en-CA")}
                     required
                   />
                 </div>
@@ -351,6 +362,7 @@ export default function CrearReserva({ onSuccess }) {
                     type="time"
                     value={horaInicio}
                     onChange={(e) => setHoraInicio(e.target.value)}
+                    min={getMinHoraInicio()}
                     required
                   />
                 </div>
