@@ -19,6 +19,7 @@ import com.parking.dto.EspacioResponseDTO;
 import com.parking.dto.UpdateEstadoEspacioDTO;
 import com.parking.service.EspacioService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 
@@ -65,6 +66,8 @@ public class EspacioController {
 	}
 
 	@DeleteMapping("/{id}/permanente")
+	@Operation(summary = "Eliminar espacio permanentemente",
+		description = "Elimina el espacio solo si no existen tickets asociados.")
 	public ResponseEntity<Void> eliminarEspacioPermanente(
 			@PathVariable @Positive(message = "El id debe ser mayor a 0") Long id) {
 		espacioService.eliminarEspacioPermanente(id);

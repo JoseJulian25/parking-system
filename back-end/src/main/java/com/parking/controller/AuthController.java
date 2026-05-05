@@ -15,6 +15,9 @@ import com.parking.dto.LoginResponseDTO;
 import com.parking.dto.MeResponseDTO;
 import com.parking.service.AuthService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -30,11 +33,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Iniciar sesion", description = "Retorna un JWT para autenticacion en endpoints protegidos.")
+    @SecurityRequirements
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
         return ResponseEntity.ok(authService.login(dto));
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Perfil autenticado", description = "Obtiene el usuario actual desde el token JWT.")
     public ResponseEntity<MeResponseDTO> me(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
