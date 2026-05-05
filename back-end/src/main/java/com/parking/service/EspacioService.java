@@ -160,6 +160,18 @@ public class EspacioService {
     }
 
     @Transactional
+    public void eliminarEspacioPermanente(Long id) {
+        Espacio espacio = espacioRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Espacio no encontrado"));
+
+        if (ticketRepository.existsByEspacioId(espacio.getId())) {
+            throw new IllegalStateException("No se puede eliminar el espacio porque tiene tickets asociados");
+        }
+
+        espacioRepository.delete(espacio);
+    }
+
+    @Transactional
     public EspacioResponseDTO reactivarEspacio(Long id) {
 
         Espacio espacio = espacioRepository.findByIdAndActivoFalse(id)

@@ -2,7 +2,14 @@ import { Layers3, PlusCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-import { addEspaciosLote, deleteEspacio, getEspacios, getEspaciosInactivos, reactivarEspacio } from "../../api/espacios";
+import {
+  addEspaciosLote,
+  deleteEspacio,
+  deleteEspacioPermanente,
+  getEspacios,
+  getEspaciosInactivos,
+  reactivarEspacio
+} from "../../api/espacios";
 import AddEspaciosDialog from "../espacios/AddEspaciosDialog";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -28,6 +35,8 @@ export const EspaciosSection = () => {
   const [page, setPage] = useState(1);
   const [openDesactivarDialog, setOpenDesactivarDialog] = useState(false);
   const [espacioPendiente, setEspacioPendiente] = useState(null);
+  const [openEliminarDialog, setOpenEliminarDialog] = useState(false);
+  const [espacioEliminar, setEspacioEliminar] = useState(null);
 
   const fetchEspacios = async () => {
     try {
@@ -104,6 +113,7 @@ export const EspaciosSection = () => {
     }
   };
 
+
   const espaciosCombinados = useMemo(() => {
     const map = new Map();
     espacios.forEach((espacio) => {
@@ -162,6 +172,33 @@ export const EspaciosSection = () => {
     }
 
     return !espaciosInactivosIds.has(espacio?.id);
+  };
+
+  const handleOpenEliminar = (espacio) => {
+    if (!espacio?.id) return;
+    if (isEspacioActivo(espacio)) {
+      toast.error("Desactiva el espacio antes de eliminarlo");
+      return;
+    }
+    setEspacioEliminar(espacio);
+    setOpenEliminarDialog(true);
+  };
+
+  const handleConfirmEliminar = async () => {
+    if (!espacioEliminar?.id) return;
+    try {
+      setLoadingActionId(espacioEliminar.id);
+      await deleteEspacioPermanente(espacioEliminar.id);
+      toast.success("Espacio eliminado permanentemente");
+      setOpenEliminarDialog(false);
+      setEspacioEliminar(null);
+      await fetchEspacios();
+    } catch (error) {
+      const message = error?.response?.data?.message || "No se pudo eliminar el espacio";
+      toast.error(message);
+    } finally {
+      setLoadingActionId(null);
+    }
   };
 
   const getEstadoStyle = (estado) => {
@@ -268,14 +305,26 @@ export const EspaciosSection = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="px-2 py-2 text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={loadingActionId === espacio.id || (activo && String(espacio.estado || "").toUpperCase() !== "LIBRE")}
-                          onClick={() => (activo ? handleOpenDesactivar(espacio) : handleReactivar(espacio))}
-                        >
-                          {loadingActionId === espacio.id ? "Procesando..." : activo ? "Desactivar" : "Reactivar"}
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={loadingActionId === espacio.id || (activo && String(espacio.estado || "").toUpperCase() !== "LIBRE")}
+                            onClick={() => (activo ? handleOpenDesactivar(espacio) : handleReactivar(espacio))}
+                          >
+                            {loadingActionId === espacio.id ? "Procesando..." : activo ? "Desactivar" : "Reactivar"}
+                          </Button>
+                          {!activo && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={loadingActionId === espacio.id}
+                              onClick={() => handleOpenEliminar(espacio)}
+                            >
+                              Eliminar
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -347,6 +396,40 @@ export const EspaciosSection = () => {
               disabled={loadingActionId === espacioPendiente?.id}
             >
               {loadingActionId === espacioPendiente?.id ? "Procesando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openEliminarDialog} onOpenChange={setOpenEliminarDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar espacio permanentemente</DialogTitle>
+            <DialogDescription>
+              {espacioEliminar
+                ? `Esta accion eliminara el espacio ${espacioEliminar.codigoEspacio || espacioEliminar.numero || "-"} de forma definitiva.`
+                : "Esta accion eliminara el espacio de forma definitiva."}
+              {" "}Solo se permite si no tiene tickets asociados.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (loadingActionId) return;
+                setOpenEliminarDialog(false);
+                setEspacioEliminar(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmEliminar}
+              disabled={loadingActionId === espacioEliminar?.id}
+            >
+              {loadingActionId === espacioEliminar?.id ? "Procesando..." : "Eliminar"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -64,6 +64,13 @@ public class EspacioController {
 		return ResponseEntity.noContent().build();
 	}
 
+	@DeleteMapping("/{id}/permanente")
+	public ResponseEntity<Void> eliminarEspacioPermanente(
+			@PathVariable @Positive(message = "El id debe ser mayor a 0") Long id) {
+		espacioService.eliminarEspacioPermanente(id);
+		return ResponseEntity.noContent().build();
+	}
+
 	@PatchMapping("/{id}/activar")
 	public ResponseEntity<EspacioResponseDTO> reactivarEspacio(
 			@PathVariable @Positive(message = "El id debe ser mayor a 0") Long id) {

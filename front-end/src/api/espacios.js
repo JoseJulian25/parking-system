@@ -42,6 +42,16 @@ export const deleteEspacio = async (id) => {
   }
 };
 
+export const deleteEspacioPermanente = async (id) => {
+  try {
+    const { data } = await client.delete(`/espacios/${id}/permanente`);
+    return data;
+  } catch (error) {
+    console.log("Error deleteEspacioPermanente:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
 export const reactivarEspacio = async (id) => {
   try {
     const { data } = await client.patch(`/espacios/${id}/activar`);
