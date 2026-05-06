@@ -246,10 +246,7 @@ export const EntradaPage = () => {
 
   useEffect(() => {
     const prefill = location.state;
-    if (!prefill?.reservaConfirmada) {
-      setPlacaBloqueada(false);
-      return;
-    }
+    if (!prefill?.reservaConfirmada) return;
 
     if (prefill.placa) {
       setPlaca(String(prefill.placa).toUpperCase());
