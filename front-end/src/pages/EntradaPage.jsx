@@ -62,6 +62,7 @@ export const EntradaPage = () => {
   const [tipoVehiculo, setTipoVehiculo] = useState("CARRO");
   const [espacioSeleccionadoId, setEspacioSeleccionadoId] = useState(null);
   const [placa, setPlaca] = useState("");
+  const [placaBloqueada, setPlacaBloqueada] = useState(false);
 
   const [ticketRegistrado, setTicketRegistrado] = useState(null);
   const [espacioDetalle, setEspacioDetalle] = useState(null);
@@ -139,6 +140,7 @@ export const EntradaPage = () => {
 
       setTicketRegistrado(ticket);
       setPlaca("");
+      setPlacaBloqueada(false);
       setEspacioSeleccionadoId(null);
       abrirTicketEntradaPdf({
         ticketData: ticket,
@@ -244,11 +246,16 @@ export const EntradaPage = () => {
 
   useEffect(() => {
     const prefill = location.state;
-    if (!prefill?.reservaConfirmada) return;
+    if (!prefill?.reservaConfirmada) {
+      setPlacaBloqueada(false);
+      return;
+    }
 
     if (prefill.placa) {
       setPlaca(String(prefill.placa).toUpperCase());
     }
+
+    setPlacaBloqueada(true);
 
     if (prefill.tipoVehiculo) {
       setTipoVehiculo(String(prefill.tipoVehiculo).toUpperCase());
@@ -444,6 +451,7 @@ export const EntradaPage = () => {
                   onChange={(e) => setPlaca(e.target.value.toUpperCase())}
                   placeholder="ABC123"
                   autoComplete="off"
+                  disabled={placaBloqueada}
                 />
               </div>
 

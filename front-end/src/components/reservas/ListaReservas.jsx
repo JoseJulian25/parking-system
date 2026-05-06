@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 import {
-  confirmarLlegada,
   cancelarReserva,
   getReservas,
   reenviarCorreoReserva
@@ -136,23 +135,23 @@ export default function ListaReservas({ refresh }) {
     fetchReservas();
   }, [refresh]);
 
-  const handleConfirmar = async (codigoReserva) => {
+  const handleConfirmar = (reserva) => {
+    const codigoReserva = reserva?.codigoReserva || "";
     try {
       setProcesandoCodigo(codigoReserva);
-      await fetchReservas();
 
       navigate("/entrada", {
         state: {
           reservaConfirmada: true,
-          placa: reservaActualizada?.placa,
-          tipoVehiculo: reservaActualizada?.tipoVehiculo,
-          espacioId: reservaActualizada?.espacioId,
-          codigoReserva: reservaActualizada?.codigoReserva,
+          placa: reserva?.placa,
+          tipoVehiculo: reserva?.tipoVehiculo,
+          espacioId: reserva?.espacioId,
+          codigoReserva: reserva?.codigoReserva,
         },
       });
     } catch (error) {
       console.error(error);
-      toast.error(getErrorMessage(error, "Error confirmando llegada"));
+      toast.error(getErrorMessage(error, "Error enviando a entrada"));
     } finally {
       setProcesandoCodigo("");
     }
@@ -394,7 +393,7 @@ export default function ListaReservas({ refresh }) {
                     <Button
                       size="sm"
                       disabled={procesandoCodigo === reserva.codigoReserva}
-                      onClick={() => handleConfirmar(reserva.codigoReserva)}
+                      onClick={() => handleConfirmar(reserva)}
                     >
                       {procesandoCodigo === reserva.codigoReserva ? "Procesando..." : "Confirmar"}
                     </Button>
