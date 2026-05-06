@@ -139,7 +139,6 @@ export default function ListaReservas({ refresh }) {
   const handleConfirmar = async (codigoReserva) => {
     try {
       setProcesandoCodigo(codigoReserva);
-      const reservaActualizada = await confirmarLlegada(codigoReserva);
       await fetchReservas();
 
       navigate("/entrada", {
