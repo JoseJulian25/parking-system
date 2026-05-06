@@ -22,7 +22,6 @@ import com.parking.entity.EstadoReserva;
 import com.parking.entity.Reserva;
 import com.parking.entity.TipoVehiculo;
 import com.parking.entity.Usuario;
-import com.parking.exception.EmailDeliveryException;
 import com.parking.repository.EspacioRepository;
 import com.parking.repository.EstadoEspacioRepository;
 import com.parking.repository.EstadoReservaRepository;
@@ -129,7 +128,7 @@ public class ReservaService {
             reservaEmailService.enviarConfirmacionReserva(creada);
             creada.setCorreoEnviado(true);
             reservaRepository.save(creada);
-        } catch (EmailDeliveryException ex) {
+        } catch (Exception ex) {
             log.warn("No se pudo enviar correo de confirmacion para la reserva {}", creada.getCodigoReserva(), ex);
         }
 
@@ -148,12 +147,12 @@ public class ReservaService {
         try {
             reservaEmailService.enviarConfirmacionReserva(reserva);
             reserva.setCorreoEnviado(true);
-            Reserva actualizada = reservaRepository.save(reserva);
-            return toDto(actualizada);
-        } catch (EmailDeliveryException ex) {
+        } catch (Exception ex) {
             log.warn("No se pudo reenviar correo para la reserva {}", reserva.getCodigoReserva(), ex);
-            throw new IllegalStateException("No se pudo reenviar el correo de la reserva");
         }
+
+        Reserva actualizada = reservaRepository.save(reserva);
+        return toDto(actualizada);
     }
 
     @Transactional
@@ -200,7 +199,7 @@ public class ReservaService {
 
         try {
             reservaEmailService.enviarCancelacionReserva(actualizada);
-        } catch (EmailDeliveryException ex) {
+        } catch (Exception ex) {
             log.warn("No se pudo enviar correo de cancelacion para la reserva {}", actualizada.getCodigoReserva(), ex);
         }
 
