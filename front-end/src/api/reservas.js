@@ -10,11 +10,6 @@ export const buscarReservaPorCodigo = async (codigo) => {
   return data;
 };
 
-export const confirmarLlegada = async (codigoReserva) => {
-  const { data } = await client.patch(`/reservas/${codigoReserva}/confirmar-llegada`);
-  return data;
-};
-
 export const getReservas = async () => {
   const { data } = await client.get("/reservas");
   return data;

@@ -46,11 +46,6 @@ public class ReservaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.crearReserva(dto));
     }
 
-    @PatchMapping("/{codigoReserva}/confirmar-llegada")
-    public ResponseEntity<ReservaResponseDTO> confirmarLlegada(@PathVariable String codigoReserva) {
-        return ResponseEntity.ok(reservaService.confirmarLlegada(codigoReserva));
-    }
-
     @PatchMapping("/{codigoReserva}/cancelar")
     public ResponseEntity<ReservaResponseDTO> cancelarReserva(@PathVariable String codigoReserva,
             @Valid @RequestBody ReservaCancelacionDTO dto) {

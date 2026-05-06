@@ -14,12 +14,15 @@ import com.parking.dto.EntradaVehiculoDTO;
 import com.parking.dto.EntradaVehiculoResponseDTO;
 import com.parking.entity.Espacio;
 import com.parking.entity.EstadoEspacio;
+import com.parking.entity.EstadoReserva;
 import com.parking.entity.EstadoTicket;
+import com.parking.entity.Reserva;
 import com.parking.entity.Ticket;
 import com.parking.entity.TipoVehiculo;
 import com.parking.entity.Usuario;
 import com.parking.repository.EspacioRepository;
 import com.parking.repository.EstadoEspacioRepository;
+import com.parking.repository.EstadoReservaRepository;
 import com.parking.repository.EstadoTicketRepository;
 import com.parking.repository.ReservaRepository;
 import com.parking.repository.TicketRepository;
@@ -36,11 +39,13 @@ public class EntradaService {
     private static final String ESTADO_TICKET_CERRADO = "CERRADO";
     private static final String ESTADO_TICKET_ANULADO = "ANULADO";
     private static final String ESTADO_RESERVA_ACTIVA = "ACTIVA";
+    private static final String ESTADO_RESERVA_PENDIENTE = "PENDIENTE";
 
     private final EspacioRepository espacioRepository;
     private final EstadoEspacioRepository estadoEspacioRepository;
     private final TipoVehiculoRepository tipoVehiculoRepository;
     private final ReservaRepository reservaRepository;
+    private final EstadoReservaRepository estadoReservaRepository;
     private final TicketRepository ticketRepository;
     private final EstadoTicketRepository estadoTicketRepository;
     private final UsuarioRepository usuarioRepository;
@@ -51,6 +56,7 @@ public class EntradaService {
             EstadoEspacioRepository estadoEspacioRepository,
             TipoVehiculoRepository tipoVehiculoRepository,
             ReservaRepository reservaRepository,
+            EstadoReservaRepository estadoReservaRepository,
             TicketRepository ticketRepository,
             EstadoTicketRepository estadoTicketRepository,
             UsuarioRepository usuarioRepository,
@@ -59,6 +65,7 @@ public class EntradaService {
         this.estadoEspacioRepository = estadoEspacioRepository;
         this.tipoVehiculoRepository = tipoVehiculoRepository;
         this.reservaRepository = reservaRepository;
+        this.estadoReservaRepository = estadoReservaRepository;
         this.ticketRepository = ticketRepository;
         this.estadoTicketRepository = estadoTicketRepository;
         this.usuarioRepository = usuarioRepository;
@@ -80,22 +87,35 @@ public class EntradaService {
         String placa = normalize(dto.getPlaca()).toUpperCase(Locale.ROOT);
 
         String estadoEspacioActual = normalize(espacio.getEstado().getNombre()).toUpperCase(Locale.ROOT);
+        
         if (!ESTADO_ESPACIO_LIBRE.equals(estadoEspacioActual)
             && !ESTADO_ESPACIO_RESERVADO.equals(estadoEspacioActual)) {
             throw new IllegalStateException("Solo se puede registrar entrada en espacios libres o reservados");
         }
 
         if (ESTADO_ESPACIO_RESERVADO.equals(estadoEspacioActual)) {
-            boolean reservaActiva = reservaRepository
-                .findTopByEspacioIdAndPlacaIgnoreCaseAndEstadoNombreIgnoreCaseOrderByHoraInicioDesc(
+            Reserva reservaPendiente = reservaRepository
+                .findTopByEspacioIdAndEstadoNombreIgnoreCaseOrderByHoraInicioDesc(
                     espacio.getId(),
-                    placa,
-                    ESTADO_RESERVA_ACTIVA)
-                .isPresent();
+                    ESTADO_RESERVA_PENDIENTE)
+                    .orElse(null);
 
-            if (!reservaActiva) {
-            throw new IllegalStateException(
-                "El espacio esta reservado. Solo se permite entrada para la reserva activa asociada");
+            if (reservaPendiente != null) {
+                EstadoReserva estadoActiva = estadoReservaRepository.findByNombreIgnoreCase(ESTADO_RESERVA_ACTIVA)
+                        .orElseThrow(() -> new NoSuchElementException("Estado de reserva ACTIVA no encontrado"));
+                reservaPendiente.setEstado(estadoActiva);
+                reservaRepository.save(reservaPendiente);
+            } else {
+                boolean reservaActiva = reservaRepository
+                    .findTopByEspacioIdAndEstadoNombreIgnoreCaseOrderByHoraInicioDesc(
+                        espacio.getId(),
+                        ESTADO_RESERVA_ACTIVA)
+                        .isPresent();
+
+                if (!reservaActiva) {
+                    throw new IllegalStateException(
+                            "El espacio esta reservado. Solo se permite entrada para la reserva activa asociada");
+                }
             }
         }
 

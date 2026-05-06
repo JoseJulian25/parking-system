@@ -156,27 +156,6 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO confirmarLlegada(String codigoReserva) {
-        Reserva reserva = reservaRepository.findByCodigoReserva(normalize(codigoReserva))
-                .orElseThrow(() -> new NoSuchElementException("Reserva no encontrada"));
-
-        String estadoActual = normalize(reserva.getEstado().getNombre()).toUpperCase(Locale.ROOT);
-        if (!ESTADO_PENDIENTE.equals(estadoActual)) {
-            throw new IllegalStateException("Solo se puede confirmar la llegada de una reserva en estado PENDIENTE");
-        }
-
-        EstadoReserva estadoActiva = estadoReservaRepository.findByNombreIgnoreCase(ESTADO_ACTIVA)
-                .orElseThrow(() -> new NoSuchElementException("Estado de reserva ACTIVA no encontrado"));
-
-        reserva.setEstado(estadoActiva);
-        Reserva actualizada = reservaRepository.save(reserva);
-
-        actualizarEstadoEspacio(actualizada, ESTADO_ESPACIO_RESERVADO);
-
-        return toDto(actualizada);
-    }
-
-    @Transactional
     public ReservaResponseDTO cancelarReserva(String codigoReserva, ReservaCancelacionDTO dto) {
         Reserva reserva = reservaRepository.findByCodigoReserva(normalize(codigoReserva))
                 .orElseThrow(() -> new NoSuchElementException("Reserva no encontrada"));

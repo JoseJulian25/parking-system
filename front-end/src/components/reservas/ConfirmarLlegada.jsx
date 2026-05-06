@@ -3,7 +3,6 @@ import toast from "react-hot-toast";
 
 import {
   buscarReservaPorCodigo,
-  confirmarLlegada
 } from "../../api/reservas";
 
 import { Button } from "../ui/button";
@@ -104,10 +103,6 @@ export default function ConfirmarLlegada({ onSuccess }) {
       setError("");
       setSuccess("");
 
-      await confirmarLlegada(reserva.codigoReserva);
-
-      setSuccess("Llegada confirmada correctamente");
-      toast.success("Llegada confirmada correctamente");
       setCodigoReserva("");
       setReserva(null);
 
