@@ -168,8 +168,11 @@ export const useTarifasConfig = ({ onError, onSuccess }) => {
         return 0;
       }
 
-      const tiempoFacturable = Math.max(0, minutos - tolerancia);
-      const tiempoACobrar = Math.max(tiempoFacturable, minimo);
+      if (minutos <= tolerancia) {
+        return 0;
+      }
+
+      const tiempoACobrar = Math.max(minutos, minimo);
       const fracciones = Math.ceil(tiempoACobrar / fraccion);
       return fracciones * tarifa;
     },
