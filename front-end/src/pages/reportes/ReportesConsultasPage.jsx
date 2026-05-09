@@ -593,25 +593,25 @@ export const ReportesConsultasPage = () => {
         </DialogContent>
       </Dialog>
 
-      <ReportesContextBar
-        fechaDesde={fechaDesde}
-        fechaHasta={fechaHasta}
-        onFechaDesdeChange={setFechaDesde}
-        onFechaHastaChange={setFechaHasta}
-        showGranularidadFilter={false}
-        showUsuarioFilter={false}
-        onLimpiar={limpiarFiltrosContexto}
-        onActualizar={cargarSeccionActiva}
-        loading={loading}
-      />
-
       <Tabs value={seccionActiva} onValueChange={setSeccionActiva} className="space-y-3">
         <TabsList className="reportes-tabs grid w-full grid-cols-2 md:grid-cols-4">
-          <TabsTrigger value="tickets">Tickets</TabsTrigger>
-          <TabsTrigger value="pagos">Pagos</TabsTrigger>
-          <TabsTrigger value="reservas">Reservas</TabsTrigger>
-          <TabsTrigger value="vehiculo">Vehiculo</TabsTrigger>
+          <TabsTrigger value="tickets" className="data-[state=active]:!bg-primary data-[state=active]:!text-primary-foreground data-[state=active]:!border-primary">Tickets</TabsTrigger>
+          <TabsTrigger value="pagos" className="data-[state=active]:!bg-primary data-[state=active]:!text-primary-foreground data-[state=active]:!border-primary">Pagos</TabsTrigger>
+          <TabsTrigger value="reservas" className="data-[state=active]:!bg-primary data-[state=active]:!text-primary-foreground data-[state=active]:!border-primary">Reservas</TabsTrigger>
+          <TabsTrigger value="vehiculo" className="data-[state=active]:!bg-primary data-[state=active]:!text-primary-foreground data-[state=active]:!border-primary">Vehiculo</TabsTrigger>
         </TabsList>
+
+        <ReportesContextBar
+          fechaDesde={fechaDesde}
+          fechaHasta={fechaHasta}
+          onFechaDesdeChange={setFechaDesde}
+          onFechaHastaChange={setFechaHasta}
+          showGranularidadFilter={false}
+          showUsuarioFilter={false}
+          onLimpiar={limpiarFiltrosContexto}
+          onActualizar={cargarSeccionActiva}
+          loading={loading}
+        />
 
         <TabsContent value="tickets" className="space-y-3">
           <div className="reportes-panel space-y-2.5">
